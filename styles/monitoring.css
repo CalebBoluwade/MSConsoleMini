@@ -1,0 +1,127 @@
+:root {
+  --active-rgb: green;
+  --light-active-rgb: #15630ff6;
+  --light-warning-rgb: #eed202;
+  --warning-rgb: #d1bf58;
+  --alert-rgb: #d22c32;
+  --light-alert-rgb: #d22c329a;
+}
+
+.hexGrid {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  column-gap: 5px;
+  padding: 24px 16px;
+  isolation: isolate;
+  height: fit-content;
+}
+
+.hexGrid > * {
+  margin: -6px -21px;
+}
+
+.hexGrid > *:nth-child(even) {
+  margin-top: 21px;
+  margin-left: 2px;
+  margin-right: -21px;
+}
+
+.hexagon-tile {
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  width: 35px;
+  height: 35px;
+  cursor: pointer;
+  float: left;
+  margin-bottom: -6px;
+  margin-left: 1px;
+}
+
+.hexagon-tile::before,
+.hexagon-tile::after {
+  content: "";
+  position: absolute;
+  border-left: 50px solid transparent;
+  border-right: 50px solid transparent;
+}
+
+.signal {
+  /* color: var(--active-rgb); */
+
+  &::before {
+    content: "";
+    display: inline-block;
+    width: 0.7rem;
+    height: 0.7rem;
+    background-color: currentColor;
+    border-radius: 50%;
+    vertical-align: middle;
+  }
+
+  &.active {
+     box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+    border-color: var(--active-rgb) !important;
+    color: #fff;
+
+    background: var(--active-rgb);
+  }
+
+  &.warning {
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+    border-color: var(--light-warning-rgb);
+    background-color: var(--warning-rgb);
+    animation: warnalertblink 2s ease-in-out infinite;
+
+    .icon,
+    .signal {
+      color: var(--light-warning-rgb);
+    }
+
+    &:hover {
+      background-color: var(--warning-rgb);
+      animation: none;
+    }
+  }
+
+  &.inactive {
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+    border-color: var(--alert-rgb) !important;
+    color: #fff;
+    animation: alertblink 2s ease-in-out infinite;
+
+    .icon,
+    .signal {
+      color: var(--alert-rgb);
+    }
+
+    &:hover {
+      background-color: var(--alert-rgb);
+      animation: none;
+    }
+  }
+}
+
+@keyframes warnalertblink {
+  0% {
+    background: var(--warning-rgb);
+  }
+  50% {
+    background: var(--light-warning-rgb);
+  }
+  100% {
+    background: var(--warning-rgb);
+  }
+}
+
+@keyframes alertblink {
+  0% {
+    background: var(--alert-rgb);
+  }
+  50% {
+    background: var(--light-alert-rgb);
+  }
+  100% {
+    background: var(--alert-rgb);
+  }
+}
