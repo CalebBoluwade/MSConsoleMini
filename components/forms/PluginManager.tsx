@@ -27,12 +27,11 @@ import {
 } from "../ui/select";
 import { isZodObject } from "@/lib/helpers/schema/utils";
 import {
-  getAllMonitors,
-  getMonitorPlugins,
-} from "@/lib/helpers/api/systemMonitorService";
+  useGetAllMonitorsQuery,
+  useGetMonitorPluginsQuery,
+} from "@/lib/helpers/api/MonitorService";
 import LoadingEventUI from "../LoadingUI";
-// import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-// import { dbImagePaths } from "@/lib/helpers/constants";
+import { SheetFooter } from "../ui/sheet";
 
 export interface PluginEditorProps {
   selectedMonitor: BaseMonitor;
@@ -104,7 +103,7 @@ export const PluginEditor: React.FC<PluginEditorProps> = ({
           selectedMonitor.PluginDetails[parseInt(key)] ?? config.default;
       });
 
-      console.log(initialProps)
+      console.log(initialProps);
       setProperties(initialProps);
       setHasChanges(null);
       setValidationErrors({});
@@ -242,10 +241,12 @@ export const PluginEditor: React.FC<PluginEditorProps> = ({
 
   if (!selectedPlugin) {
     return (
-      <div className="p-6 text-center text-gray-500">
+      <div className="p-6 text-center space-y-10 text-gray-500">
         <Settings className="w-12 h-12 mx-auto mb-4 text-gray-400" />
         <h3 className="text-lg font-medium mb-2">No Plugin Selected</h3>
         <p>Please select a plugin to edit its properties.</p>
+
+        <Button className="px-4 py-3">Add a Plugin</Button>
       </div>
     );
   }
@@ -621,13 +622,18 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
   selectedPluginIds,
   onAddPlugins,
 }) => {
-  const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearchTerm = useDebouncedSearch(searchInput, 300);
 
-  const [serviceMonitors, setServiceMonitors] = useState<BaseMonitor[]>([]);
-  const [allPlugins, setAllPlugins] = useState<MonitorPlugin[]>([]);
+  const { data: monitors, isLoading: isMonitorsLoading } =
+    useGetAllMonitorsQuery();
+  const { data: plugins, isLoading } = useGetMonitorPluginsQuery();
+
+  const [serviceMonitors, setServiceMonitors] = useState<BaseMonitor[]>(
+    monitors ?? []
+  );
+  const [allPlugins, setAllPlugins] = useState<MonitorPlugin[]>(plugins ?? []);
 
   const selectedDevice = serviceMonitors.find(
     (service) => service.SystemMonitorId == editId
@@ -636,13 +642,8 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
   useEffect(() => {
     const initialize = async () => {
       try {
-        const [monitors, plugins] = await Promise.all([
-          getAllMonitors(),
-          getMonitorPlugins(),
-        ]);
-
-        setServiceMonitors(monitors);
-        setAllPlugins(plugins);
+        setServiceMonitors(monitors ?? []);
+        setAllPlugins(plugins ?? []);
         console.log(plugins);
 
         if (selectedDevice?.Plugins) {
@@ -650,13 +651,11 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
         }
       } catch (err) {
         console.error(err);
-      } finally {
-        setIsLoading(false);
       }
     };
 
     initialize();
-  }, [selectedDevice?.Plugins]);
+  }, [selectedDevice?.Plugins, monitors, plugins]);
 
   // Filter plugins based on selected device type
   const filteredPlugins = allPlugins.filter(
@@ -677,21 +676,20 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
   const handleAddSelected = () => {
     console.log(selected);
     onAddPlugins(selected);
-    // setSelected([]);
   };
 
-  if (isLoading) {
+  if (isLoading || isMonitorsLoading) {
     return <LoadingEventUI />;
   }
 
   return (
-    <div className="w-full max-w-2xl">
+    <div className="">
       {/* <CardHeader>
         <CardTitle>Service Plugin Management</CardTitle>
       </CardHeader>
       <CardContent> */}
       {/* <Form {...form}> */}
-      <div className="space-y-6">
+      <div className="space-y-6 relative">
         <div className="space-y-4">
           <Input
             placeholder="Search Monitors..."
@@ -700,7 +698,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
           />
 
           <Separator />
-          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-2 min-h-[80vh]">
             <CardTitle>
               Select Plugins for Service Device [{selectedDevice?.Device}] you
               want to monitor.
@@ -742,7 +740,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-end gap-4">
+        <SheetFooter className=" w-full">
           <Button
             type="button"
             disabled={selected.length === 0}
@@ -750,7 +748,7 @@ export const PluginSelector: React.FC<PluginSelectorProps> = ({
           >
             Add Selected ({selected.length})
           </Button>
-        </div>
+        </SheetFooter>
       </div>
       {/* </Form> */}
       {/* </CardContent> */}

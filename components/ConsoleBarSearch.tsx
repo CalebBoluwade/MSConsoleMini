@@ -43,6 +43,7 @@ interface ConsoleSearchProps {
   emptyMessage?: string;
   disabled?: boolean;
   className?: string;
+  isLoading: boolean;
   // Injected data sources
   devices?: BaseMonitor[];
   groups?: MonitorGroup[];
@@ -50,6 +51,7 @@ interface ConsoleSearchProps {
 
 const ConsoleBarSearch = ({
   placeholder,
+  isLoading,
   emptyMessage = "No results found.",
   disabled = false,
   className,
@@ -60,9 +62,7 @@ const ConsoleBarSearch = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebouncedSearch(searchQuery, 300);
-  const [isLoading] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-
 
   // Mock search function - replace with your actual API call
   // const mockSearchAPI = useCallback(async (query: string): Promise<SearchResult[]> => {
@@ -198,7 +198,9 @@ const ConsoleBarSearch = ({
 
     return Object.entries(groups)
       .filter(([_, items]) => {
-        console.debug(_);
+        if (!_) {
+          console.log(_);
+        }
         return items.length > 0;
       })
       .map(([type, items]) => ({

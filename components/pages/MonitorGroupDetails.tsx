@@ -191,10 +191,10 @@ export const MonitorGroupDetails: React.FC = () => {
         open={isEditNotificationDialogOpen}
         onOpenChange={setIsEditNotificationDialogOpen}
       >
-        <DialogContent className="sm:max-w-[625px]">
           <DialogHeader>
             <DialogTitle>Edit Notification Group</DialogTitle>
           </DialogHeader>
+        <DialogContent className="sm:max-w-[625px]">
           <UserNotifications />
         </DialogContent>
       </Dialog>

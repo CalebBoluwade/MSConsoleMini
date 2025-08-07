@@ -24,6 +24,8 @@ export const GenerateMockDevices = (count: number): BaseMonitor[] => {
     IPAddress: `192.168.1.${i + 1}`,
     Port: Math.floor(Math.random() * 1000),
     Device: "switch",
+    Agent: "",
+    Metrics: [],
     IsMonitored: true,
     IsServiceIssueAcknowledged: false,
     Configuration: "{}",

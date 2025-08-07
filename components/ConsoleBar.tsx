@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import React, { useLayoutEffect, useState } from "react";
 import { Orbitron } from "next/font/google";
 import { useRouter, usePathname } from "next/navigation";
 import {
@@ -40,7 +40,7 @@ import ConsoleBarSearch from "./ConsoleBarSearch";
 import { Dialog, DialogTitle, DialogContent, DialogTrigger } from "./ui/dialog";
 import { getCurrentPageHeader } from "@/lib/config/site-map";
 import Link from "next/link";
-import { getAllMonitors } from "@/lib/helpers/api/systemMonitorService";
+import { useGetAllMonitorsQuery } from "@/lib/helpers/api/MonitorService";
 
 const orbitron = Orbitron({ subsets: ["latin"] });
 const ConsoleBar = () => {
@@ -49,11 +49,11 @@ const ConsoleBar = () => {
 
   const [sideMenuOpen, setSideMenuOpen] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [serviceMonitors, setServiceMonitors] = useState<BaseMonitor[]>([]);
 
-  useEffect(() => {
-    getAllMonitors().then(setServiceMonitors);
-  }, []);
+  const { data: monitors, isLoading: isMonitorsLoading } =
+    useGetAllMonitorsQuery();
+
+  const [serviceMonitors] = useState<BaseMonitor[]>(monitors ?? []);
 
   function addZero(i: number) {
     let y;
@@ -89,11 +89,12 @@ const ConsoleBar = () => {
         {!sideMenuOpen ? <ChevronLeft onClick={() => router.back()} /> : <></>}
 
         {/* <SidebarTrigger> */}
-          <Menu onClick={() => setSideMenuOpen(!sideMenuOpen)} />
+        <Menu onClick={() => setSideMenuOpen(!sideMenuOpen)} />
         {/* </SidebarTrigger> */}
 
         <p className="text-md capitalize">{getCurrentPageHeader(pathname)}</p>
         <ConsoleBarSearch
+          isLoading={isMonitorsLoading}
           placeholder="Console Search"
           devices={serviceMonitors}
           // groups={async () => await db.getAllGroups()}
@@ -130,7 +131,7 @@ const ConsoleBar = () => {
               <Navigation size={24} strokeWidth={1.5} />
               Navigator
             </DialogTitle>
-                 <Link
+            <Link
               href={"/"}
               className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
             >
@@ -158,14 +159,14 @@ const ConsoleBar = () => {
               <Blocks size={28} className="mr-2" />
               <span>Plugin MarketPlace</span>
             </Link>
-                 <Link
-              href={"/"}
+            <Link
+              href={"/console/integrations"}
               className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
             >
               <SquaresIntersect size={28} className="mr-2" />
               <span>Integrations</span>
             </Link>
-                 <Link
+            <Link
               href={"/"}
               className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
             >

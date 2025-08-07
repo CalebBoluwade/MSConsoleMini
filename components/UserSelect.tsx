@@ -51,8 +51,9 @@ const UserSelectItem: React.FC<UserSelectItemProps> = ({
   onToggle,
 }) => (
   <div
-    role="option"
-    aria-selected={isSelected}
+    // role="option"
+    // aria-selected={isSelected}
+    // tabIndex={0}
     className="flex items-center gap-3 py-2 px-2 hover:bg-gray-50 cursor-pointer rounded-sm"
     onClick={() => onToggle(user.id)}
     onKeyDown={(e) => {
@@ -61,7 +62,6 @@ const UserSelectItem: React.FC<UserSelectItemProps> = ({
         onToggle(user.id);
       }
     }}
-    tabIndex={0}
   >
     <Checkbox
       checked={isSelected}
@@ -94,7 +94,8 @@ const SelectedUserBadge: React.FC<SelectedUserBadgeProps> = ({
       </AvatarFallback>
     </Avatar>
     <span className="font-medium">{user.name}</span>
-    <button
+    <Button
+      variant={"ghost"}
       onClick={(e: React.MouseEvent) => {
         e.stopPropagation();
         onRemove(user.id);
@@ -103,7 +104,7 @@ const SelectedUserBadge: React.FC<SelectedUserBadgeProps> = ({
       aria-label={`Remove ${user.name}`}
     >
       <X className="h-3 w-3" />
-    </button>
+    </Button>
   </div>
 );
 
@@ -162,7 +163,7 @@ const UserSelectDropdown: React.FC<UserSelectDropdownProps> = ({
   searchPlaceholder = "Search users...",
   enableSearch = true,
   error,
-  id = 'user-select',
+  id = "user-select",
 }) => {
   const [isOpen, setIsOpen] = React.useState<boolean>(false);
   const [searchQuery, setSearchQuery] = React.useState<string>("");
@@ -182,28 +183,25 @@ const UserSelectDropdown: React.FC<UserSelectDropdownProps> = ({
     );
   }, [users, debouncedSearchTerm]);
 
-  const toggleUser = React.useCallback(
-    (userId: string): void => {
-      const user = users.find((u) => u.id === userId);
-      if (!user) return;
+const toggleUser = React.useCallback((userId: string) => {
+  const user = users.find((u) => u.id === userId);
+  if (!user) return;
 
-      const isSelected = selectedUserIds.includes(userId);
-      const newSelectedUsers = isSelected
-        ? value.filter((u) => u.id !== userId)
-        : [...value, user];
+   const isSelected = value.some((u) => u.id === userId);
+  const newSelectedUsers = isSelected
+    ? value.filter((u) => u.id !== userId)
+    : [...value, user];
 
-      onChange(newSelectedUsers);
-    },
-    [users, value, selectedUserIds, onChange]
-  );
+  // Only call onChange if there's a change
+  if (JSON.stringify(newSelectedUsers) !== JSON.stringify(value)) {
+    onChange(newSelectedUsers);
+  }
+}, [value, users, onChange]);
 
-  const removeUser = React.useCallback(
-    (userId: string): void => {
-      const newSelectedUsers = value.filter((u) => u.id !== userId);
-      onChange(newSelectedUsers);
-    },
-    [value, onChange]
-  );
+  const removeUser = React.useCallback((userId: string): void => {
+    const newSelectedUsers = value.filter((u) => u.id !== userId);
+    onChange(newSelectedUsers);
+  }, [onChange, value]);
 
   const clearAll = React.useCallback((): void => {
     onChange([]);
@@ -244,7 +242,9 @@ const UserSelectDropdown: React.FC<UserSelectDropdownProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+      <label className="text-sm font-medium text-gray-700" htmlFor={id}>
+        {label}
+      </label>
 
       {/* Custom Select-like component */}
       <div className="relative" data-user-select-dropdown>
@@ -321,9 +321,10 @@ const UserSelectDropdown: React.FC<UserSelectDropdownProps> = ({
               )}
 
               <div
-              // id={listboxId} 
-              className={`${maxHeight} overflow-y-auto`} role="listbox"
-              aria-multiselectable="true"
+                // id={listboxId}
+                className={`${maxHeight} overflow-y-auto`}
+                role="listbox"
+                aria-multiselectable="true"
                 aria-labelledby={`${id}-label`}
               >
                 {filteredUsers.length === 0 ? (
@@ -385,5 +386,7 @@ const UserSelectDropdown: React.FC<UserSelectDropdownProps> = ({
     </div>
   );
 };
+
+UserSelectDropdown.displayName = "UserSelectDropdown";
 
 export default UserSelectDropdown;

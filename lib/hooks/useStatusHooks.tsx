@@ -70,11 +70,11 @@ export const StatusColor = (status: string): string => {
 export const TremorColor = (status: string): string => {
   switch ((status ?? "").toLowerCase()) {
     case "healthy":
-      return "green";
+      return "emerald";
     case "escalation":
-      return "yellow";
+      return "amber";
     case "acknowledged":
-      return "blue";
+      return "sky";
     case "degraded":
       return "red";
     case "invalidconfiguration":

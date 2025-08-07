@@ -285,7 +285,7 @@ export const PLUGIN_CONFIGS: Record<string, PluginConfig> = {
       },
     },
   },
-  [PluginTypes.Agent]: {
+  [PluginTypes.AgentMonitor]: {
     name: "Agent Health",
     schema: HttpMonitorSchema,
     properties: {

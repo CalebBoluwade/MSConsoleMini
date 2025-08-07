@@ -42,9 +42,9 @@ export enum Devices {
 
 export enum PluginTypes {
   HTTPMonitor = "http_monitor",
-  SSLMonitor = "ssl_check",
+  SSLMonitor = "SSLChecker",
   DatabaseMonitor = "database-monitor",
-  Agent = "agent_health",
+  AgentMonitor = "AgentMonitor",
 }
 
 export const dbImagePaths = [

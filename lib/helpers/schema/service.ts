@@ -12,8 +12,8 @@ export const ServiceEntitySchema = z
       .string()
       .min(1, "Name of Service is required")
       .max(50, "Name too long"),
-    Description: z.string().max(200, "Description too long").optional(),
-    IPAddress: z.string(),
+    Description: z.string().max(200, "Description too long"),
+    IPAddress: z.string().min(8),
     Port: z.string(z.number()),
     //   color: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format"),
     checkInterval: z.string({

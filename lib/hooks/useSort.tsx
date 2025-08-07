@@ -1,11 +1,18 @@
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { StatusRanking } from "../helpers/utils";
 
-const SortIcon = {
-  none: ArrowUpDown,
-  asc: ArrowUp,
-  desc: ArrowDown,
+export type SortIconFn = (isSorted: false | SortDirection) => ReactNode;
+
+export const SortIcon = (sort: false | SortDirection) => {
+  switch (sort) {
+    case 'asc':
+      return <ArrowUp className="ml-2 h-4 w-4" />;
+    case 'desc':
+      return <ArrowDown className="ml-2 h-4 w-4" />;
+    default:
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+  }
 };
 
 type SortDirection = "none" | "asc" | "desc";
@@ -45,17 +52,17 @@ const useSort = ({
   };
 
   // Helper to render sort icon
-  const renderSortIcon = (field: SortField) => {
-    const Icon =
-      sortField === field ? SortIcon[sortDirection] : SortIcon["none"];
-    return (
-      <Icon
-        className={`ml-1 h-4 w-4 ${
-          sortField === field ? "opacity-100" : "opacity-40"
-        }`}
-      />
-    );
-  };
+  // const renderSortIcon = (field: SortField) => {
+  //   const Icon =
+  //     sortField === field ? SortIcon(sortDirection) : SortIcon("none");
+  //   return (
+  //     <Icon
+  //       className={`ml-1 h-4 w-4 ${
+  //         sortField === field ? "opacity-100" : "opacity-40"
+  //       }`}
+  //     />
+  //   );
+  // };
 
   const filtered = useMemo(() => {
     let filtered = data.filter(
@@ -104,7 +111,7 @@ const useSort = ({
     return filtered;
   }, [data, debouncedSearchTerm, healthFilter, sortField, sortDirection]);
 
-  return { filtered, renderSortIcon, handleSort };
+  return { filtered, handleSort, SortIcon };
 };
 
 export default useSort;

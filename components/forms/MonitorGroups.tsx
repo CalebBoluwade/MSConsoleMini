@@ -25,7 +25,7 @@ import { GroupFormSchema } from "@/lib/helpers/schema/groups";
 import LoadingEventUI from "../LoadingUI";
 import useDebouncedSearch from "@/lib/hooks/useDebouncedSearch";
 import { StatusBadge } from "@/lib/hooks/useStatusHooks";
-import { getAllMonitors } from "@/lib/helpers/api/systemMonitorService";
+import { useGetAllMonitorsQuery } from "@/lib/helpers/api/MonitorService";
 
 interface GroupFormProps {
   groupId?: string;
@@ -40,8 +40,9 @@ export const GroupForm: React.FC<GroupFormProps> = ({
 }) => {
   const [devices, setDevices] = useState<BaseMonitor[]>([]);
   const [availableMonitors, setAvailableMonitors] = useState<BaseMonitor[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showDeviceSelector, setShowDeviceSelector] = useState(false);
+
+   const { data, isLoading } = useGetAllMonitorsQuery();
 
   const form = useForm<z.infer<typeof GroupFormSchema>>({
     resolver: zodResolver(GroupFormSchema),
@@ -58,7 +59,9 @@ export const GroupForm: React.FC<GroupFormProps> = ({
 
       // Load mock devices if none exist
 
-      getAllMonitors().then(async (monitors) => await db.addDevices(monitors));
+      if (!data || data?.length) {
+        await db.addDevices(data!)
+      }
 
       const monitors = await db.getAllDevices();
 
@@ -76,11 +79,10 @@ export const GroupForm: React.FC<GroupFormProps> = ({
           setDevices(groupDevices);
         }
       }
-      setIsLoading(false);
     };
 
     initialize();
-  }, [groupId, form]);
+  }, [groupId, data, form]);
 
   const onSubmit = async (values: z.infer<typeof GroupFormSchema>) => {
     try {

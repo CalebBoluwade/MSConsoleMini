@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import UserSelectDropdown from "../UserSelect";
@@ -18,6 +18,8 @@ import { Button } from "../ui/button";
 import LoadingEventUI from "../LoadingUI";
 
 const UserNotifications = ({ editId }: { editId?: string }) => {
+  const [isLoading, setIsLoading] = useState(false);
+
   const defaultUsers: User[] = [
     {
       id: "1",
@@ -72,17 +74,21 @@ const UserNotifications = ({ editId }: { editId?: string }) => {
 
   const onSubmit = async (data: NotificationGroupSchema) => {
     try {
+      setIsLoading(true);
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       console.log("Form submitted:", data);
       alert("Task created successfully!");
+      setIsLoading(false);
     } catch (error) {
       console.error("Error submitting form:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (form.formState.isSubmitting) {
+  if (isLoading) {
     return (
       <div className="h-[calc(100dvh-150px)] w-full flex justify-center items-center">
         <LoadingEventUI />

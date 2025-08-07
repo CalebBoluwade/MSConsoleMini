@@ -79,7 +79,7 @@ const ActionConfirmation: React.FC<ActionConfirmationDialogProps> = ({
           </Button>
         )}
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent className="space-y-5">
         <AlertDialogHeader>
           <AlertDialogTitle>{dialogTitle}</AlertDialogTitle>
           <AlertDialogDescription>{dialogDescription}</AlertDialogDescription>

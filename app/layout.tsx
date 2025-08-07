@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import { SITE_MAP } from "@/lib/config/site-map";
 import { Suspense } from "react";
+import { ReduxProvider } from "@/lib/helpers/context/Provider";
 
 const jetBrains_Mono = JetBrains_Mono({
   subsets: ["latin"],
@@ -24,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${jetBrains_Mono.className} antialiased`}>
-        {/* <SidebarProvider> */}
+        <ReduxProvider>
           <Suspense>
             <ThemeProvider
               attribute="class"
@@ -36,7 +37,7 @@ export default function RootLayout({
               <Toaster />
             </ThemeProvider>
           </Suspense>
-        {/* </SidebarProvider> */}
+        </ReduxProvider>
       </body>
     </html>
   );

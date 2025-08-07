@@ -32,18 +32,19 @@ import {
   SelectValue,
 } from "../ui/select";
 import {
-  createServiceMonitor,
-  getMonitorPlugins,
-  getSingleMonitor,
-  updateServiceMonitor,
-} from "@/lib/helpers/api/systemMonitorService";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  useCreateServiceMonitorMutation,
+  useGetMonitorPluginsQuery,
+  useGetSingleMonitorQuery,
+  useUpdateServiceMonitorMutation,
+} from "@/lib/helpers/api/MonitorService";
 import { intervalOptions } from "@/lib/helpers/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "../ui/sheet";
 
 interface ServiceManagerFormProps {
   editServiceId?: string;
@@ -58,13 +59,23 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
   onSuccess,
   onCancel,
 }) => {
-  const [isLoading, setIsLoading] = useState(true);
   const [showPluginSelector, setShowPluginSelector] = useState(false);
   const [plugins, setPlugins] = useState<MonitorPlugin[]>(
     existingPlugins ?? []
   );
-  const [allPlugins, setAllPlugins] = useState<MonitorPlugin[]>([]);
 
+  const { data: monitor, isLoading: isMonitorsLoading } =
+    useGetSingleMonitorQuery(editServiceId! ?? "", {
+      skip: !editServiceId,
+    });
+  const { data: pluginData, isLoading } = useGetMonitorPluginsQuery();
+
+  const [createServiceMonitor] = useCreateServiceMonitorMutation();
+  const [updateServiceMonitor] = useUpdateServiceMonitorMutation();
+
+  const [allPlugins, setAllPlugins] = useState<MonitorPlugin[]>(
+    pluginData ?? []
+  );
   const form = useForm<z.infer<typeof ServiceEntitySchema>>({
     resolver: zodResolver(ServiceEntitySchema),
     defaultValues: {
@@ -101,11 +112,6 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
 
       try {
         if (editServiceId) {
-          const [service, plugins] = await Promise.all([
-            getSingleMonitor(editServiceId),
-            getMonitorPlugins(),
-          ]);
-
           const isResultsInvalid =
             !Array.isArray(plugins) || plugins.length === 0;
 
@@ -113,31 +119,27 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
           setAllPlugins(plugins);
           console.log(isResultsInvalid, plugins);
 
-          if (service) {
+          if (monitor) {
             form.reset({
-              ServiceName: service.ServiceName,
-              Description: service.Description,
-              Port: service.Port.toString(),
-              IPAddress: service.IPAddress,
-              Device: service.Device,
-              Plugins: service.PluginDetails.flatMap((p) => p.Id),
+              ServiceName: monitor.ServiceName,
+              Description: monitor.Description,
+              Port: monitor.Port.toString(),
+              IPAddress: monitor.IPAddress,
+              Device: monitor.Device,
+              Plugins: monitor.PluginDetails.flatMap((p) => p.Id),
             });
           }
 
           // const groupDevices = await db.getDevicesByIds(group.deviceIds);
           // setDevices(groupDevices);
-        } else {
-          await getMonitorPlugins().then(setAllPlugins);
         }
       } catch (err) {
         console.error(err);
-      } finally {
-        setIsLoading(false);
       }
     };
 
     initialize();
-  }, [editServiceId, form]);
+  }, [editServiceId, monitor, plugins, form]);
 
   const handleAddPlugin = (Ids: string[]) => {
     const currentPlugins = form.getValues("Plugins") || [];
@@ -167,8 +169,6 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
   };
 
   const onSubmit = async (data: z.infer<typeof ServiceEntitySchema>) => {
-    setIsLoading(true);
-
     console.log("Selected Interval:", data.checkInterval);
     console.log("Cron Expression:", cron);
 
@@ -185,9 +185,33 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
         //       });
         //     }
         console.log(editServiceId, data);
-        await updateServiceMonitor(editServiceId, data);
+        await updateServiceMonitor({ id: editServiceId, data })
+          .unwrap()
+          .then(() => {
+            toast("Configuration Updated", {
+              description: `${editServiceId ? "Edited" : "Updated"} ${
+                data.ServiceName
+              } Service ${
+                data.Plugins.length > 0 ? "and Updated its plugins" : ""
+              }`,
+            });
+
+            onSuccess?.();
+          });
       } else {
-        await createServiceMonitor(data);
+        createServiceMonitor(data)
+          .unwrap()
+          .then(() => {
+            toast("Configuration saved", {
+              description: `${editServiceId ? "Edited" : "Created"} ${
+                data.ServiceName
+              } Service ${
+                data.Plugins.length > 0 ? "and Updated its plugins" : ""
+              }`,
+            });
+
+            onSuccess?.();
+          });
         //     await db.addGroup({
         //       name: values.name,
 
@@ -195,13 +219,6 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
         //       deviceIds: values.deviceIds ?? [],
         //     });
       }
-      toast("Configuration saved", {
-        description: `${editServiceId ? "Edited" : "Created"} ${
-          data.ServiceName
-        } Service ${data.Plugins.length > 0 ? "and Updated its plugins" : ""}`,
-      });
-
-      onSuccess?.();
     } catch (error) {
       console.error("Error saving service:", error);
 
@@ -210,12 +227,10 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
 
         // variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isMonitorsLoading) {
     return (
       <div className="h-[calc(100dvh-150px)] w-full flex justify-center items-center">
         <LoadingEventUI />
@@ -443,16 +458,43 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
           <div className="space-y-2">
             <div className="flex justify-between items-cmb-2">
               <FormLabel className="px-2">Plugins</FormLabel>
-              <Button
-                type="button"
-                variant="outline"
-                className="border-green-600 hover:bg-green-700 --text-white p-2 rounded-lg font-medium transition-colors flex items-center gap-1"
-                size="sm"
-                onClick={() => setShowPluginSelector(true)}
-              >
-                <Blocks className="w-4 h-4 mr-2" />
-                Add Plugins
-              </Button>
+
+              <AnimatePresence>
+                <Sheet
+                  modal
+                  open={showPluginSelector}
+                  onOpenChange={setShowPluginSelector}
+                >
+                  <SheetTrigger>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-green-600 hover:bg-green-700 --text-white p-2 rounded-lg font-medium transition-colors flex items-center gap-1"
+                      size="sm"
+                      onClick={() => setShowPluginSelector(true)}
+                    >
+                      <Blocks className="w-4 h-4 mr-2" />
+                      Add Plugins
+                    </Button>
+                  </SheetTrigger>
+
+                  <SheetContent className="sm:max-w-[625px]">
+                    <SheetHeader>
+                      <SheetTitle>
+                        {editServiceId ? "Edit Plugins" : "Add Plugins"}
+                      </SheetTitle>
+                    </SheetHeader>
+
+                    <div className="p-4 overflow-y-auto flex-grow">
+                      <PluginSelector
+                        editId={editServiceId ?? undefined}
+                        selectedPluginIds={form.getValues("Plugins") || []}
+                        onAddPlugins={handleAddPlugin}
+                      />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </AnimatePresence>
             </div>
 
             <AnimatePresence>
@@ -528,30 +570,6 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
             </Button>
           </div>
         </form>
-
-        <AnimatePresence>
-          <Dialog
-            modal
-            open={showPluginSelector}
-            onOpenChange={setShowPluginSelector}
-          >
-            <DialogContent className="sm:max-w-[625px]">
-              <DialogHeader>
-                <DialogTitle>
-                  {editServiceId ? "Edit Plugins" : "Add Plugins"}
-                </DialogTitle>
-              </DialogHeader>
-
-              <div className="p-4 overflow-y-auto flex-grow">
-                <PluginSelector
-                  editId={editServiceId ?? undefined}
-                  selectedPluginIds={form.getValues("Plugins") || []}
-                  onAddPlugins={handleAddPlugin}
-                />
-              </div>
-            </DialogContent>
-          </Dialog>
-        </AnimatePresence>
       </Form>
     </div>
   );

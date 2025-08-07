@@ -24,9 +24,9 @@ import {
 } from "@/components/ui/card";
 import { PluginEditor } from "../forms/PluginManager";
 import {
-  getMonitoringResultsById,
-  getSingleMonitor,
-} from "@/lib/helpers/api/systemMonitorService";
+  useGetMonitoringResultsByIdQuery,
+  useGetSingleMonitorQuery,
+} from "@/lib/helpers/api/MonitorService";
 import LoadingEventUI from "../LoadingUI";
 import { Button } from "../ui/button";
 import {
@@ -49,70 +49,61 @@ import {
 } from "@/lib/hooks/useStatusHooks";
 import { formatDateTime } from "@/lib/helpers/utils";
 import { Timeline } from "../Timeline";
+// import DeployNewAgent from "../forms/NewAgent";
+import SystemChart from "../CPUChart";
+import DiskDrive from "../DiskDrive";
 
 const ServiceDetails: React.FC = () => {
   const { SystemMonitorId } = useParams();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [agentDialogOpen, setAgentDialogOpen] = useState(false);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
-  const [selectedMonitor, setSelectedMonitor] = useState<BaseMonitor>();
   const [selectedMonitorResult, setSelectedMonitorResult] =
     useState<MonitoringResult | null>();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [monitoringResults, setMonitoringResults] = useState<
-    MonitoringResult[]
-  >([]);
+  const { data: selectedMonitor, isLoading: isMonitorLoading } =
+    useGetSingleMonitorQuery(SystemMonitorId!.toString() ?? "", {
+      skip: !SystemMonitorId!.toString(),
+    });
+
+  const {
+    data: monitorResults,
+    isLoading: resultsLoading,
+    error,
+    refetch: refetchResults,
+  } = useGetMonitoringResultsByIdQuery(SystemMonitorId!.toString() ?? "", {
+    skip: !SystemMonitorId,
+  });
+
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  const uniqueMonitorResults = useGroupedMonitorResults(monitoringResults);
+  const uniqueMonitorResults = useGroupedMonitorResults(monitorResults ?? []);
   const healthyCount = uniqueMonitorResults.filter(
     (m) => m.status.toLowerCase() === "healthy"
   ).length;
   const totalCount = uniqueMonitorResults.length;
 
-  const loadData = async () => {
-    try {
-      const [monitor, results] = await Promise.all([
-        getSingleMonitor(SystemMonitorId!.toString()),
-        getMonitoringResultsById(SystemMonitorId!.toString()),
-      ]);
-
-      const isResultsInvalid = !Array.isArray(results) || results.length === 0;
-
-      console.log(monitor, isResultsInvalid);
-      if (!monitor) {
-        router.push("/console/monitors");
-        return;
-      }
-
-      setSelectedMonitor(monitor);
-      setMonitoringResults(results);
-    } catch (error) {
-      console.error("Error loading data:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
   useEffect(() => {
     if (SystemMonitorId) {
-      loadData();
+      try {
+        const isResultsInvalid =
+          !Array.isArray(monitorResults) || monitorResults.length === 0;
+
+        console.log(selectedMonitor, isResultsInvalid);
+        if (!selectedMonitor && !isMonitorLoading) {
+          router.push("/console/monitors");
+          return;
+        }
+        setLastUpdated(new Date());
+      } catch (error) {
+        console.error("Error loading data:", error);
+      }
     }
 
     return () => {};
-  }, [SystemMonitorId, router]);
-
-  const fetchData = async () => {
-    setIsLoading(true);
-
-    await loadData();
-
-    setTimeout(() => {
-      setLastUpdated(new Date());
-      setIsLoading(false);
-    }, 1000);
-  };
+  }, [SystemMonitorId, selectedMonitor, isMonitorLoading, monitorResults, router]);
 
   const handleSuccess = async () => {
     setIsDialogOpen(false);
@@ -129,7 +120,7 @@ const ServiceDetails: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  if (isLoading) {
+  if (isMonitorLoading || resultsLoading) {
     return (
       <div className="h-[calc(100dvh-150px)] w-full flex justify-center items-center">
         <LoadingEventUI />
@@ -137,81 +128,78 @@ const ServiceDetails: React.FC = () => {
     );
   }
 
+  if (error || !selectedMonitor) {
+    return <p>Error loading data</p>;
+  }
+
   return (
     <div className="p-4 space-y-6">
-      <div className="space-y-6 p-6 rounded-lg shadow-sm border">
-        <div className="flex justify-end items-center">
-          {/* <h1 className="text-3xl font-bold text-gray-900">Service Details</h1> */}
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-500 flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              Last updated: {lastUpdated.toLocaleTimeString()}
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setEditingServiceId(SystemMonitorId!.toString());
-                    setIsDialogOpen(true);
-                  }}
-                >
-                  <MenuIcon className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="text-2xl w-72" align="end">
-                <DropdownMenuLabel>Service Actions</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => {
-                    setEditingServiceId(SystemMonitorId!.toString());
-                    setIsDialogOpen(true);
-                  }}
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit Service
-                </DropdownMenuItem>
-                          <DropdownMenuItem
-                  onClick={() => {
-                    setEditingServiceId(SystemMonitorId!.toString());
-                    setIsDialogOpen(true);
-                  }}
-                >
-                  <BellRingIcon className="w-4 h-4" />
-                  Configure Notification Receipients
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setEditingServiceId(SystemMonitorId!.toString());
-                    setIsDialogOpen(true);
-                  }}
-                >
-                  <AppWindowMac className="w-4 h-4" />
-                  Deploy Agent
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={fetchData}
-                  disabled={isLoading}
-                  className="flex items-center gap-2"
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-                  />
-                  Refresh
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 max-md:grid-cols-1 grid-flow-col items-center gap-6">
-          <Card className="py-2">
+      <div className="space-y-6 py-6 px-2">
+        <div className="grid grid-cols-2 max-md:grid-cols-1 grid-flow-col items-center gap-6">
+          <Card className="py-2 min-w-[225px]">
             <CardHeader>
-              <CardTitle className="text-3xl font-bold --text-gray-900">
+              <CardTitle className="flex justify-between items-center gap-4 text-3xl font-bold --text-gray-900">
                 Service Details
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingServiceId(SystemMonitorId!.toString());
+                        setIsDialogOpen(true);
+                      }}
+                    >
+                      <MenuIcon className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="text-2xl w-72" align="end">
+                    <DropdownMenuLabel>Service Actions</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setEditingServiceId(SystemMonitorId!.toString());
+                        setIsDialogOpen(true);
+                      }}
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit Service
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setEditingServiceId(SystemMonitorId!.toString());
+                        setIsDialogOpen(true);
+                      }}
+                    >
+                      <BellRingIcon className="w-4 h-4" />
+                      Configure Notification Receipients
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setAgentDialogOpen(true)}>
+                      <AppWindowMac className="w-4 h-4" />
+                      Deploy Agent
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={refetchResults}
+                      disabled={isMonitorLoading || resultsLoading}
+                      className="flex items-center gap-2"
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 ${
+                          isMonitorLoading || resultsLoading
+                            ? "animate-spin"
+                            : ""
+                        }`}
+                      />
+                      Refresh
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CardTitle>
+
+              <div className="text-sm text-right text-gray-500 flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </div>
             </CardHeader>
 
             <CardContent className="space-y-3">
@@ -230,10 +218,10 @@ const ServiceDetails: React.FC = () => {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 col-span-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 h-full --col-span-2 gap-6">
             <Card className="py-2 border-l-4 border-l-green-500">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">
+                <CardTitle className="text-xl font-medium text-gray-600">
                   Service Health
                 </CardTitle>
               </CardHeader>
@@ -250,14 +238,14 @@ const ServiceDetails: React.FC = () => {
 
             <Card className="py-2 border-l-4 border-l-blue-500">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">
+                <CardTitle className="text-xl font-medium text-gray-600">
                   Total Checks
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="text-2xl font-bold text-blue-600">
-                    {monitoringResults.length}
+                    {monitorResults!.length}
                   </div>
                   <Activity className="h-8 w-8 text-blue-500" />
                 </div>
@@ -267,7 +255,7 @@ const ServiceDetails: React.FC = () => {
 
             <Card className="py-2 border-l-4 border-l-purple-500">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">
+                <CardTitle className="text-xl font-medium text-gray-600">
                   Uptime
                 </CardTitle>
               </CardHeader>
@@ -304,8 +292,8 @@ const ServiceDetails: React.FC = () => {
             {/* </div> */}
           </CardHeader>
           <CardContent className="space-y-2">
-            {monitoringResults.length ? (
-              monitoringResults
+            {(monitorResults ?? []).length ? (
+              (monitorResults ?? [])
                 .toSorted(
                   (a, b) =>
                     new Date(b.checkedAt).getTime() -
@@ -352,7 +340,7 @@ const ServiceDetails: React.FC = () => {
           </CardContent>
         </Card>
 
-        <AnimatePresence>
+        <AnimatePresence key={"plugin"}>
           <motion.div
             className="h-full w-full lg:col-span-3"
             key={"PluginEditor"}
@@ -365,12 +353,22 @@ const ServiceDetails: React.FC = () => {
         </AnimatePresence>
       </section>
 
-      <AnimatePresence>
+      <section>
+        <div className="flex flex-1 max-md:flex-col gap-4 mt-8 mb-5">
+          <DiskDrive AgentId={selectedMonitor.Agent} />
+        </div>
+
+        <SystemChart AgentId={selectedMonitor?.Agent} />
+      </section>
+
+      <AnimatePresence key={"results"}>
         {/* Plugin Results Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           {selectedMonitorResult && (
-            <DialogContent className="--max-w-4xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader></DialogHeader>
+            <DialogContent className="max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle></DialogTitle>
+              </DialogHeader>
 
               <div className="space-y-6">
                 {/* System Overview */}
@@ -500,6 +498,21 @@ const ServiceDetails: React.FC = () => {
             </DialogContent>
           )}
         </Dialog>
+
+        <AnimatePresence key="agent">
+          <Dialog
+            modal
+            open={agentDialogOpen}
+            onOpenChange={setAgentDialogOpen}
+          >
+            <DialogContent>
+              {/* <DeployNewAgent
+                IP={selectedMonitor!.IPAddress}
+                Port={selectedMonitor!.Port}
+              /> */}
+            </DialogContent>
+          </Dialog>
+        </AnimatePresence>
 
         <Dialog
           key={"EditService"}

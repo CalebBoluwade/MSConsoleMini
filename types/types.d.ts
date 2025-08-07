@@ -34,18 +34,20 @@ interface MonitoringResult {
   pluginResults: PluginResult[];
 }
 
-type BaseMonitor = {
+interface BaseMonitor {
   SystemMonitorId: string;
   ServiceName: string;
   Description: string;
   IPAddress: string;
   Port: number;
+  Agent: string;
   CurrentHealthCheck: string;
   HealthStatusInfo: {
     Name: string;
     Description: string;
     Color: string;
   };
+  Metrics: number[];
   Plugins: string[];
   PluginDetails: MonitorPlugin[];
   checkInterval: string;
@@ -137,6 +139,18 @@ interface DBSchema {
     indexes: { name: string };
   };
 }
+
+interface APIResponsePayload<T> {
+    Message: string;
+    MetaData: Record<string, number>;
+    Data: Array<T>;
+    Cause: string;
+  }
+
+  interface APIResponse<T> {
+    data: APIResponsePayload<T>;
+    error?: undefined;
+  }
 
 
 interface User {

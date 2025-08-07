@@ -8,7 +8,6 @@ import { webSocketService } from "@/lib/helpers/service/websocket.service";
 import { toast } from "sonner";
 import { WifiOff } from "lucide-react";
 import { Card, CardTitle, CardHeader } from "@/components/ui/card";
-import LiveTrackerView from "../LiveTrackerView";
 
 const AllDevices = () => {
   const [devices, setDevices] = useState<BaseMonitor[]>([]);
@@ -99,8 +98,6 @@ const AllDevices = () => {
           </CardTitle>
         </CardHeader>
       </Card>
-
-      <LiveTrackerView data={devices} />
 
       <HexagonGridView data={devices} />
     </div>
