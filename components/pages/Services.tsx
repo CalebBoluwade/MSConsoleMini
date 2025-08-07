@@ -15,8 +15,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
-  Trash,
-  Edit,
   ChevronLeft,
   ChevronsLeft,
   ChevronRight,
@@ -37,20 +35,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { useRouter } from "next/navigation";
 import ServiceManager from "../forms/ServiceManager";
 import LoadingEventUI from "../LoadingUI";
-import { Card as TremorCard, SparkAreaChart } from "@tremor/react";
 import {
   useGetAllMonitorsQuery,
   useDeleteServiceMonitorMutation,
 } from "@/lib/helpers/api/MonitorService";
-import { Switch } from "../ui/switch";
-import ActionConfirmation from "../ActionConfirmation";
 import { toast } from "sonner";
-import { getIntervalLabel } from "@/lib/helpers/utils";
-import { Input } from "../ui/input";
 import {
   MonitorTableColumns
 } from "@/lib/helpers/tables/MonitoredServices";
@@ -62,40 +53,15 @@ const ServicesManagement = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [acknowledgeServiceDialogOpen, setAcknowledgeServiceDialogOpen] =
-    useState(false);
+  // const [acknowledgeServiceDialogOpen, setAcknowledgeServiceDialogOpen] =
+  //   useState(false);
   const [monitoredDialogOpen, setMonitoredDialogOpen] = useState(false);
-
-  const router = useRouter();
 
   useEffect(() => {
     if (data) {
       setServiceMonitors(data);
     }
   }, [data]);
-  
-  const chartdata = [
-    {
-      month: "Jan 21",
-      Performance: 4000,
-    },
-    {
-      month: "Feb 21",
-      Performance: 3000,
-    },
-    {
-      month: "Mar 21",
-      Performance: 2000,
-    },
-    {
-      month: "Apr 21",
-      Performance: 2780,
-    },
-    {
-      month: "May 21",
-      Performance: 1890,
-    },
-  ];
   
   const [serviceMonitors, setServiceMonitors] = useState<BaseMonitor[]>([]);
 
@@ -342,7 +308,7 @@ const ServicesManagement = () => {
           </CardContent>
         </Card>
 
-        {(serviceMonitors ?? []).length > 0 ? (
+        {/* {(serviceMonitors ?? []).length > 0 ? (
           <AnimatePresence>
             <Table>
               <TableHeader>
@@ -549,7 +515,7 @@ const ServicesManagement = () => {
               Create Your First Service
             </Button>
           </div>
-        )}
+        )} */}
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-[625px]">
