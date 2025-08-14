@@ -68,14 +68,12 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
     useGetSingleMonitorQuery(editServiceId! ?? "", {
       skip: !editServiceId,
     });
-  const { data: pluginData, isLoading } = useGetMonitorPluginsQuery();
+
+  const { data: allPlugins, isLoading } = useGetMonitorPluginsQuery();
 
   const [createServiceMonitor] = useCreateServiceMonitorMutation();
   const [updateServiceMonitor] = useUpdateServiceMonitorMutation();
 
-  const [allPlugins, setAllPlugins] = useState<MonitorPlugin[]>(
-    pluginData ?? []
-  );
   const form = useForm<z.infer<typeof ServiceEntitySchema>>({
     resolver: zodResolver(ServiceEntitySchema),
     defaultValues: {
@@ -94,7 +92,6 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
       : intervalOptions.find((opt) => opt.label === selectedInterval)?.cron;
 
   const selectedServiceType = form.watch("Device");
-  console.log(form.formState.errors);
 
   useEffect(() => {
     const initialize = async () => {
@@ -116,7 +113,7 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
             !Array.isArray(plugins) || plugins.length === 0;
 
           // if (isResultsInvalid)
-          setAllPlugins(plugins);
+
           console.log(isResultsInvalid, plugins);
 
           if (monitor) {
@@ -141,31 +138,38 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
     initialize();
   }, [editServiceId, monitor, plugins, form]);
 
-  const handleAddPlugin = (Ids: string[]) => {
+  const handleAddPlugins = (ids: string[]) => {
     const currentPlugins = form.getValues("Plugins") || [];
     // Merge and deduplicate
-    const newPluginsIds = Array.from(new Set([...currentPlugins, ...Ids]));
+    const newPluginIds = Array.from(new Set([...currentPlugins, ...ids]));
 
-    form.setValue("Plugins", newPluginsIds);
+    // Find plugins that are being added (not already in current plugins)
+    const newlyAddedPlugins = (allPlugins ?? []).filter(
+      (plugin) => ids.includes(plugin.Id) && !currentPlugins.includes(plugin.Id)
+    );
 
-    // 🔍 Fix: Ensure types match and filter works
-    const addedPlugins = allPlugins.filter((plugin) => Ids.includes(plugin.Id));
+    if (editServiceId) console.log("Existing IDs:", form.getValues("Plugins"));
+    form.setValue("Plugins", newPluginIds);
+    console.log("Incoming IDs:", ids);
+    console.log("Updated Plugin IDs:", newPluginIds);
+    console.log(
+      "Newly Added Plugins:",
+      newlyAddedPlugins,
+      "All Plugins",
+      allPlugins
+    );
 
-    console.log("New Plugin IDs:", newPluginsIds);
-    console.log("Incoming IDs:", Ids);
-    console.log("All IDs:", allPlugins);
-    console.log("Matched Plugins:", addedPlugins);
-
-    // Update displayed plugins state
-    setPlugins((prev) => [...prev, ...addedPlugins]);
+    // Update displayed plugins state - only add new ones to avoid duplicates
+    setPlugins((prev) => [...prev, ...newlyAddedPlugins]);
     setShowPluginSelector(false);
   };
 
-  const handleRemovePlugin = (Id: string) => {
+  const handleRemovePlugins = (ids: string[]) => {
+    console.log("Removing Plugins ...", ids);
     const currentPlugins = form.getValues("Plugins") || [];
-    const Plugins = currentPlugins.filter((id) => id !== Id);
-    form.setValue("Plugins", Plugins);
-    setPlugins((prev) => prev.filter((plugin) => plugin.Id !== Id));
+    const updatedPlugins = currentPlugins.filter((id) => !ids.includes(id));
+    form.setValue("Plugins", updatedPlugins);
+    setPlugins((prev) => prev.filter((plugin) => !ids.includes(plugin.Id)));
   };
 
   const onSubmit = async (data: z.infer<typeof ServiceEntitySchema>) => {
@@ -173,6 +177,7 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
     console.log("Cron Expression:", cron);
 
     data.checkInterval = cron!;
+    data.Plugins = plugins.map((p) => p.Id);
     try {
       if (editServiceId) {
         //     const existingGroup = await db.getGroup(serviceId);
@@ -381,9 +386,21 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
                         </SelectContent>
                       </Select>
 
+                      {selectedServiceType === "Server" && (
+                        <FormDescription className="mt-1 text-center w-full">
+                          [Agent Plugin Recommended]
+                        </FormDescription>
+                      )}
+
                       {selectedServiceType === "Database" && (
-                        <FormDescription>
+                        <FormDescription className="mt-1 text-center w-full">
                           [Database Plugin Required]
+                        </FormDescription>
+                      )}
+
+                      {selectedServiceType === "Network" && (
+                        <FormDescription className="mt-1 text-center w-full">
+                          [Network SNMP Plugin Required]
                         </FormDescription>
                       )}
                       {/* <Dialog
@@ -489,7 +506,8 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
                       <PluginSelector
                         editId={editServiceId ?? undefined}
                         selectedPluginIds={form.getValues("Plugins") || []}
-                        onAddPlugins={handleAddPlugin}
+                        onAddPlugins={handleAddPlugins}
+                        onRemovePlugins={handleRemovePlugins}
                       />
                     </div>
                   </SheetContent>
@@ -537,7 +555,7 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
                         variant="ghost"
                         size="icon"
                         className="text-destructive hover:text-destructive"
-                        onClick={() => handleRemovePlugin(plugin.Id)}
+                        onClick={() => handleRemovePlugins([plugin.Id])}
                       >
                         <Trash className="w-4 h-4" />
                       </Button>

@@ -26,7 +26,6 @@ import { GroupForm } from "../forms/MonitorGroups";
 import HexagonGridView from "../HexagonGridView";
 import LoadingEventUI from "../LoadingUI";
 import { webSocketService } from "@/lib/helpers/service/websocket.service";
-import UserNotifications from "../forms/UserNotifications";
 
 export const MonitorGroupDetails: React.FC = () => {
   const { id } = useParams();
@@ -36,8 +35,6 @@ export const MonitorGroupDetails: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isEditNotificationDialogOpen, setIsEditNotificationDialogOpen] =
-    useState(true);
 
   useEffect(() => {
     const loadData = async () => {
@@ -186,18 +183,6 @@ export const MonitorGroupDetails: React.FC = () => {
       </div>
 
       <HexagonGridView data={devices} />
-
-      <Dialog
-        open={isEditNotificationDialogOpen}
-        onOpenChange={setIsEditNotificationDialogOpen}
-      >
-          <DialogHeader>
-            <DialogTitle>Edit Notification Group</DialogTitle>
-          </DialogHeader>
-        <DialogContent className="sm:max-w-[625px]">
-          <UserNotifications />
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[625px]">

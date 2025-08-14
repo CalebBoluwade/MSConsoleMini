@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -42,35 +42,27 @@ import {
   useDeleteServiceMonitorMutation,
 } from "@/lib/helpers/api/MonitorService";
 import { toast } from "sonner";
-import {
-  MonitorTableColumns
-} from "@/lib/helpers/tables/MonitoredServices";
+import MonitorTable from "@/lib/helpers/tables/MonitoredServices";
 
 const ServicesManagement = () => {
   const { data, isLoading, error, refetch } = useGetAllMonitorsQuery();
   const [deleteServiceMonitor] = useDeleteServiceMonitorMutation();
 
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  // const [acknowledgeServiceDialogOpen, setAcknowledgeServiceDialogOpen] =
-  //   useState(false);
-  const [monitoredDialogOpen, setMonitoredDialogOpen] = useState(false);
+  const [serviceMonitors, setServiceMonitors] = useState<BaseMonitor[]>([]);
 
   useEffect(() => {
     if (data) {
       setServiceMonitors(data);
     }
-  }, [data]);
-  
-  const [serviceMonitors, setServiceMonitors] = useState<BaseMonitor[]>([]);
+  }, [data, serviceMonitors]);
 
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "CreatedAt", desc: true },
+  ]);
   const [globalFilter, setGlobalFilter] = useState("");
 
-
-    const handleDeleteService = async (serviceId: string) => {
+  const handleDeleteService = async (serviceId: string) => {
     try {
       await deleteServiceMonitor(serviceId)
         .unwrap()
@@ -88,29 +80,21 @@ const ServicesManagement = () => {
     }
   };
 
-  // const columns = useMemo(
-  //   () =>
-  //     MonitorTableColumns(
-  //       monitoredDialogOpen,
-  //       setMonitoredDialogOpen,
-  //       setEditingServiceId,
-  //       setIsEditDialogOpen,
-  //       isDeleteDialogOpen, setIsDeleteDialogOpen,
-  //       handleDeleteService
-  //     ),
-  //   []
-  // );
+  const {
+    MonitorTableColumns,
+    isEditDialogOpen,
+    editingServiceId,
+    setEditingServiceId,
+    setIsEditDialogOpen,
+  } = MonitorTable({
+    handleDeleteService: handleDeleteService,
+  });
+
+  const columns = useMemo(() => MonitorTableColumns(), [MonitorTableColumns]);
 
   const table = useReactTable({
     data: serviceMonitors,
-    columns:  MonitorTableColumns(
-        monitoredDialogOpen,
-        setMonitoredDialogOpen,
-        setEditingServiceId,
-        setIsEditDialogOpen,
-        isDeleteDialogOpen, setIsDeleteDialogOpen,
-        handleDeleteService
-      ),
+    columns: columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -142,14 +126,19 @@ const ServicesManagement = () => {
   }
 
   if (error) {
-    return <p>Error loading data</p>;
+    return (
+      <div className="h-[calc(100dvh-150px)] w-full flex justify-center items-center gap-3">
+        Error loading data
+        <Button onClick={() => refetch()}>Retry</Button>
+      </div>
+    );
   }
 
   return (
     <AnimatePresence>
       <motion.div className="space-y-5 space-x-2">
         {/* Header */}
-        <motion.div className="bg-white dark:bg-gray-800 space-y-6 rounded-lg p-6 shadow-sm border">
+        <motion.div className="bg-white dark:bg-gray-800 space-y-6 rounded-lg px-6 py-4 shadow-sm border">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -307,215 +296,6 @@ const ServicesManagement = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* {(serviceMonitors ?? []).length > 0 ? (
-          <AnimatePresence>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Host</TableHead>
-                  <TableHead>T</TableHead>
-                  <TableHead>Monitor</TableHead>
-                  <TableHead>Plugins</TableHead>
-                  <TableHead>Monitor Interval</TableHead>
-                  <TableHead>Overview</TableHead>
-                  <TableHead>Acknowledge</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {serviceMonitors.map((Service) => (
-                  <TableRow key={Service.SystemMonitorId}>
-                    <TableCell className="font-medium">
-                      {Service.ServiceName}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground truncate">
-                      {Service.Description ?? "-"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground truncate">
-                      {Service.IPAddress || "-"}
-                    </TableCell>
-
-                    <TableCell className="text-muted-foreground">
-                      {Service.Device || "-"}
-                    </TableCell>
-
-                    <TableCell>
-                      <Switch
-                        checked={Service.IsMonitored}
-                        id={Service.SystemMonitorId}
-                        color={"green"}
-                        // tooltip="Enable Monitoring"
-                        onCheckedChange={(d) => {
-                          console.log(
-                            "Switch changed",
-                            d,
-                            Service.SystemMonitorId
-                          );
-                          setMonitoredDialogOpen(true);
-                        }}
-                      />
-
-                      <ActionConfirmation
-                        triggerButtonLabel={""}
-                        triggerButtonIcon={<></>}
-                        dialogTitle={`Disable Monitoring For ${Service.ServiceName}`}
-                        dialogDescription="This action stops our Engine from performing health Checks on this Service"
-                        onConfirm={
-                          () => {}
-                          // handleDeleteService(Service.SystemMonitorId)
-                        }
-                        open={monitoredDialogOpen && Service.IsMonitored}
-                        onOpenChange={setMonitoredDialogOpen}
-                        onCancel={() => {
-                          setMonitoredDialogOpen(false);
-                        }}
-                        customTrigger={<span></span>}
-                      />
-                    </TableCell>
-
-                    <TableCell>
-                      <Badge variant="outline">
-                        {(Service.Plugins ?? []).length}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell>
-                      {getIntervalLabel(Service.checkInterval)}
-                    </TableCell>
-
-                    <TableCell>
-                      <TremorCard className="bg-accent rounded flex max-w-lg items-center justify-between px-4 py-3.5">
-                        <SparkAreaChart
-                          data={chartdata}
-                          categories={["Performance"]}
-                          index={"month"}
-                          colors={["purple", "#ffcc33"]}
-                          className="h-7 w-16 sm:h-12 sm:w-32"
-                        />
-
-                        <div className="rounded bg-emerald-500 px-2 py-1 text-sm font-medium text-white">
-                          {(Service.Metrics ?? []).length > 0
-                            ? (
-                                Service.Metrics.reduce(
-                                  (sum, value) => sum + value,
-                                  0
-                                ) / Service.Metrics.length
-                              ).toFixed(2) + " %"
-                            : "N/A"}
-                        </div>
-                      </TremorCard>
-                    </TableCell>
-
-                    <TableCell>
-                      <Switch
-                        checked={Service.IsServiceIssueAcknowledged}
-                        id={Service.SystemMonitorId}
-                        // color={"green"}
-                        // tooltip="Enable Monitoring"
-                        onCheckedChange={(d) => {
-                          console.log(
-                            "Switch changed: IsServiceIssueAcknowledged",
-                            d,
-                            Service.SystemMonitorId
-                          );
-                          setAcknowledgeServiceDialogOpen(true);
-                        }}
-                      />
-
-                      <ActionConfirmation
-                        triggerButtonLabel={`Acknowledge / Snooze ${Service.ServiceName} Service Issue`}
-                        triggerButtonIcon={<></>}
-                        dialogTitle="Are you absolutely sure you want to snooze this service?"
-                        dialogDescription="This action cannot be undone. This will permanently delete your group and remove your data from our servers."
-                        onConfirm={
-                          () => {}
-                          // handleDeleteService(Service.SystemMonitorId)
-                        }
-                        open={acknowledgeServiceDialogOpen}
-                        onOpenChange={setAcknowledgeServiceDialogOpen}
-                        onCancel={() => {
-                          setAcknowledgeServiceDialogOpen(false);
-                        }}
-                        customTrigger={<span></span>}
-                        additionalContent={
-                          <div>
-                            <p>Snooze Until</p>
-                            <Input
-                              className="w-52 text-sm"
-                              type="datetime-local"
-                              min={new Date().toISOString().slice(0, 16)}
-                            />
-                          </div>
-                        }
-                      />
-                    </TableCell>
-
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        // size="lg"
-                        onClick={() => {
-                          setEditingServiceId(Service.SystemMonitorId);
-                          setIsEditDialogOpen(true);
-                        }}
-                      >
-                        <Edit className="w-6 h-6" />
-                      </Button>
-
-                      <ActionConfirmation
-                        triggerButtonLabel={`Delete ${Service.ServiceName} Service`}
-                        triggerButtonIcon={<Trash className="w-6 h-6" />}
-                        dialogTitle="Are you absolutely sure you want to delete this service?"
-                        dialogDescription="This action cannot be undone. This will permanently delete your group and remove your data from our servers."
-                        onConfirm={() =>
-                          handleDeleteService(Service.SystemMonitorId)
-                        }
-                        open={isDeleteDialogOpen}
-                        onOpenChange={setIsDeleteDialogOpen}
-                        onCancel={() => setIsDeleteDialogOpen(false)}
-                        customTrigger={
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setIsDeleteDialogOpen(true)}
-                          >
-                            <Trash className="w-4 h-4" />
-                          </Button>
-                        }
-                      />
-
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() =>
-                          router.push(
-                            `/console/monitors/${Service.SystemMonitorId}`
-                          )
-                        }
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </AnimatePresence>
-        ) : (
-          <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
-            <p className="text-muted-foreground mb-4">
-              No Services created yet
-            </p>
-            <Button onClick={() => setIsEditDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Your First Service
-            </Button>
-          </div>
-        )} */}
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-[625px]">

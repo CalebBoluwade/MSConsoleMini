@@ -17,11 +17,34 @@ interface AddedProps<T> extends InputHTMLAttributes<HTMLDivElement> {
   data: Array<T & { selected?: boolean }>;
 }
 
+// Helper function to generate initials from service name
+const generateInitials = (serviceName: string) => {
+  if (!serviceName) return "?";
+
+  // Split by common separators and filter out empty strings
+  const words = serviceName
+    .split(/[\s\-_\.]+/)
+    .filter((word) => word.length > 0);
+
+  if (words.length === 1) {
+    // Single word: take first 2-3 characters
+    return words[0].substring(0, Math.min(3, words[0].length)).toUpperCase();
+  } else if (words.length === 2) {
+    // Two words: take first character of each
+    return (words[0][0] + words[1][0]).toUpperCase();
+  } else {
+    // Multiple words: take first character of first 3 words
+    return words
+      .slice(0, 3)
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase();
+  }
+};
+
 const HexagonGridView = <T extends BaseMonitor>({
   ...props
 }: AddedProps<T>) => {
-  // const [activeTile, setActiveTile] = useState<T | null>(null);
-
   const openInNewTab = (SystemMonitorId: string) => {
     const newWindow = window.open(
       `/console/monitors/${SystemMonitorId}`,
@@ -32,10 +55,10 @@ const HexagonGridView = <T extends BaseMonitor>({
   };
 
   return (
-    <Card className="relative py-2 h-[calc(100dvh-120px)]">
+    <Card className="relative py-3 h-[calc(100dvh-165px)]">
       <AnimatePresence>
         {props.data.length ? (
-          <div className="rounded-lg relative hexGrid grid grid-cols-12 gap-1 md:grid-cols-18 lg:grid-cols-24 mr-4">
+          <div className="rounded-lg relative hexGrid grid grid-cols-12 gap-1 md:grid-cols-18 lg:grid-cols-24 --mr-4">
             {(props.data ?? []).map((device, index) => (
               <TooltipProvider key={device.SystemMonitorId}>
                 <Tooltip>
@@ -56,37 +79,65 @@ const HexagonGridView = <T extends BaseMonitor>({
                           points="50,3 95,25 95,75 50,97 5,75 5,25"
                           fill="transparent"
                           stroke={HexStatusColor(device.CurrentHealthCheck)}
-                          strokeWidth={12}
+                          strokeWidth={8}
+                        />
+
+                        <text
+                          x="50"
+                          y="50"
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          fontSize="21"
+                          fontWeight="bold"
+                          fill={HexStatusColor(device.CurrentHealthCheck)}
+                          className="select-none font-mono"
+                        >
+                          {generateInitials(device.ServiceName || "Unknown")}
+                        </text>
+
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="30"
+                          fill="rgba(255, 255, 255, 0.1)"
+                          stroke="none"
                         />
                       </svg>
                     </motion.div>
                   </TooltipTrigger>
-                  <TooltipContent className="bg-black border border-gray-700 p-3 w-64">
-                       <p className="text-neutral-500 dark:text-neutral-400 text-sm font-mono">
+                  <TooltipContent className="border border-gray-700 p-3 space-y-4 space-x-2">
+                    <div className="flex justify-between items-center gap-3">
+                      <p>Service</p>
+
+                      <p className="--text-neutral-500 --dark:text-neutral-400 text-sm font-mono">
                         {device.ServiceName}
                       </p>
-                    <div className="text-neutral-800 dark:text-neutral-100 space-y-2">
-                      <p className="text-neutral-500 dark:text-neutral-400 text-sm font-mono">
+                    </div>
+
+                    <div className="flex justify-between items-center gap-3">
+                      <p>IP Address</p>
+
+                      <p className="--text-neutral-500 --dark:text-neutral-400 text-sm font-mono">
                         {device.IPAddress}
                       </p>
-                      <div className="flex justify-between items-center">
-                        <div>Health Score</div>
+                    </div>
+
+                    <div className="flex justify-between items-center gap-3">
+                      <p>Node Health</p>
+
+                      <div className="inline-flex items-center gap-2">
+                        <p>{device.CurrentHealthCheck}</p>
                         <span>{StatusIcon(device.CurrentHealthCheck)}</span>
-                        <p
-                          className={`font-bold px-2 py-1 rounded ${
-                            device.CurrentHealthCheck === "" ? "active" : "inactive"
-                          }`}
-                        >
-                          {device.CurrentHealthCheck}
-                        </p>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <p>Last Seen</p>
-                        <p className="text-gray-400">
-                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                          {(device as any).LastCheckTime}
-                        </p>
-                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center gap-3">
+                      <p>Checked</p>
+
+                      <p className="text-sm font-mono">
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        {(device.Metadata.LastCheckTime as any).Time ?? (device as any).LastCheckTime}
+                      </p>
                     </div>
                   </TooltipContent>
                 </Tooltip>

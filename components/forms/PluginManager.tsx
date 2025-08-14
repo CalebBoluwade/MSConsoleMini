@@ -3,8 +3,7 @@
 
 import Image from "next/image";
 import { z } from "zod";
-import React, { useEffect, useState } from "react";
-import { CardTitle } from "@/components/ui/card";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { FormDescription, FormLabel } from "@/components/ui/form";
@@ -17,7 +16,15 @@ import {
   PluginInputProps,
 } from "@/lib/helpers/schema/plugins";
 import { Textarea } from "../ui/textarea";
-import { AlertCircle, RotateCcw, Save, Settings } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  RotateCcw,
+  Save,
+  Search,
+  Settings,
+  XCircle,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -27,11 +34,13 @@ import {
 } from "../ui/select";
 import { isZodObject } from "@/lib/helpers/schema/utils";
 import {
-  useGetAllMonitorsQuery,
   useGetMonitorPluginsQuery,
+  useGetSingleMonitorQuery,
 } from "@/lib/helpers/api/MonitorService";
 import LoadingEventUI from "../LoadingUI";
 import { SheetFooter } from "../ui/sheet";
+import { CardTitle } from "../ui/card";
+import { Badge } from "../ui/badge";
 
 export interface PluginEditorProps {
   selectedMonitor: BaseMonitor;
@@ -44,16 +53,21 @@ type ValidationErrors = {
 };
 
 export const PluginEditor: React.FC<PluginEditorProps> = ({
-  // editPluginId,
   selectedMonitor,
 }) => {
-  const [properties, setProperties] = useState<PluginGenericProps>({});
-  const [hasChanges, setHasChanges] = useState<PluginGenericProps | null>(null);
+  const [pluginConfigurations, setPluginConfigurations] = useState<
+    Record<string, PluginGenericProps>
+  >({});
+  const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({});
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
     {}
   );
   const [isValidating, setIsValidating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedPluginId, setSelectedPluginId] = useState<string>();
+  const [saveStatus, setSaveStatus] = useState<
+    Record<string, "success" | "error" | null>
+  >({});
 
   const selectedPlugin =
     selectedMonitor?.PluginDetails?.find(
@@ -79,36 +93,44 @@ export const PluginEditor: React.FC<PluginEditorProps> = ({
   }, [selectedMonitor, selectedPluginId]);
 
   useEffect(() => {
-    if (selectedMonitor && pluginConfig) {
-      const configObj = (() => {
-        try {
-          return selectedMonitor?.Configuration
-            ? JSON.parse(selectedMonitor.Configuration)
-            : {};
-        } catch (err) {
-          console.error("Invalid JSON in selectedMonitor.Configuration", err);
-          return {};
+    if (selectedMonitor?.PluginDetails) {
+      const configurations: Record<string, PluginGenericProps> = {};
+      const changes: Record<string, boolean> = {};
+
+      selectedMonitor.PluginDetails.forEach((plugin) => {
+        const config = PLUGIN_CONFIGS[plugin.Id];
+        if (config) {
+          const pluginConfig: PluginGenericProps = {};
+
+          // Parse existing configuration if available
+          let existingConfig: Record<string, any> = {};
+          try {
+            existingConfig = selectedMonitor.Configuration
+              ? JSON.parse(selectedMonitor.Configuration)
+              : {};
+          } catch (err) {
+            console.error(
+              `Invalid JSON in plugin ${plugin.Id} configuration:`,
+              err
+            );
+          }
+
+          // Initialize with defaults and existing values
+          Object.entries(config.properties).forEach(([key, propConfig]) => {
+            pluginConfig[key] = existingConfig[key] ?? propConfig.default;
+          });
+
+          configurations[plugin.Id] = pluginConfig;
+          changes[plugin.Id] = false;
         }
-      })();
-
-      // Initialize properties with defaults or existing values
-      const initialProps: PluginGenericProps = {};
-
-      Object.entries(configObj).forEach(([key]) => {
-        initialProps[key] = selectedMonitor.PluginDetails[parseInt(key)];
       });
 
-      Object.entries(pluginConfig.properties).forEach(([key, config]) => {
-        initialProps[key] =
-          selectedMonitor.PluginDetails[parseInt(key)] ?? config.default;
-      });
-
-      console.log(initialProps);
-      setProperties(initialProps);
-      setHasChanges(null);
+      setPluginConfigurations(configurations);
+      setHasChanges(changes);
       setValidationErrors({});
+      setSaveStatus({});
     }
-  }, [selectedMonitor, pluginConfig]);
+  }, [selectedMonitor]);
 
   const validateProperties = async (props: PluginGenericProps) => {
     if (!pluginConfig?.schema) return {};
@@ -164,17 +186,27 @@ export const PluginEditor: React.FC<PluginEditorProps> = ({
   const handlePropertyChange = async (key: string, value: unknown) => {
     if (!selectedPlugin) return;
 
-    const newProperties = { ...properties, [key]: value } as PluginGenericProps;
-    setProperties(newProperties);
+    console.log(key, value)
+
+    const newConfiguration = {
+      ...pluginConfigurations[selectedPlugin.Id],
+      [key]: value,
+    } as PluginGenericProps;
+
+    setPluginConfigurations((prev) => ({
+      ...prev,
+      [selectedPlugin.Id]: newConfiguration,
+    }));
+
     setHasChanges((prev) => ({ ...prev, [selectedPlugin.Id]: true }));
+    setSaveStatus((prev) => ({ ...prev, [selectedPlugin.Id]: null }));
 
     // Validate the single property
     const errors = await validateSingleProperty(key, value);
-    console.log("validateSingleProperty", errors);
     setValidationErrors((prev) => ({
       ...prev,
       [selectedPlugin.Id]: {
-        ...(prev[selectedPlugin.Id] ?? {}), // fallback to empty object
+        ...(prev[selectedPlugin.Id] ?? {}),
         [key]: errors.length > 0 ? errors : undefined,
       },
     }));
@@ -183,37 +215,63 @@ export const PluginEditor: React.FC<PluginEditorProps> = ({
   const handleSave = async () => {
     if (!pluginConfig?.schema || !selectedPlugin) return;
 
-    console.log("handleSaveProperties", properties);
-    const errors = await validateProperties(properties);
-    setValidationErrors((prev) => ({
-      ...prev,
-      [selectedPlugin.Id]: errors,
-    }));
+    setIsSaving(true);
+    const currentConfig = pluginConfigurations[selectedPlugin.Id];
 
-    const hasErrors = Object.keys(errors).length > 0;
+    try {
+      const errors = await validateProperties(currentConfig);
+      setValidationErrors((prev) => ({
+        ...prev,
+        [selectedPlugin.Id]: errors,
+      }));
 
-    if (!hasErrors) {
-      try {
+      const hasErrors = Object.keys(errors).length > 0;
+
+      if (!hasErrors) {
         // Validate the complete object one more time before saving
-        const validatedData = await pluginConfig.schema.parseAsync(properties);
-
-        // Save logic here
-        console.log(
-          `Saving plugin properties for ${selectedPlugin.Id}:`,
-          validatedData
+        const validatedData = await pluginConfig.schema.parseAsync(
+          currentConfig
         );
-        setHasChanges((prev) => ({ ...prev, [selectedPlugin.Id]: false }));
 
-        // Show success message (in real app, you might want to use a toast notification)
-        console.log(
-          `✅ Plugin configuration saved successfully for ${selectedPlugin.Id}!`
+        const pluginConfigObject = { [selectedPlugin.Id]: validatedData };
+
+        // Simulate API call to save configuration
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // Update the monitor's plugin configuration
+        const updatedPluginDetails = selectedMonitor.PluginDetails.map(
+          (plugin) =>
+            plugin.Id === selectedPlugin.Id
+              ? { ...plugin, Configuration: JSON.stringify(pluginConfigObject) }
+              : plugin
         );
 
         // In real implementation, you would call an API to save the changes
-        // await savePluginConfiguration(editPluginId, selectedPlugin.Id, validatedData);
-      } catch (error) {
-        console.error("Failed to save plugin configuration:", error);
+        console.log(
+          `Saving plugin configuration for ${selectedPlugin.Id}:`,
+          pluginConfigObject, updatedPluginDetails
+        );
+
+       // await savePluginConfiguration(selectedMonitor.SystemMonitorId, selectedPlugin.Id, validatedData);
+
+        setHasChanges((prev) => ({ ...prev, [selectedPlugin.Id]: false }));
+        setSaveStatus((prev) => ({ ...prev, [selectedPlugin.Id]: "success" }));
+
+        // Clear success status after 3 seconds
+        setTimeout(() => {
+          setSaveStatus((prev) => ({ ...prev, [selectedPlugin.Id]: null }));
+        }, 3000);
       }
+    } catch (error) {
+      console.error("Failed to save plugin configuration:", error);
+      setSaveStatus((prev) => ({ ...prev, [selectedPlugin.Id]: "error" }));
+
+      // Clear error status after 5 seconds
+      setTimeout(() => {
+        setSaveStatus((prev) => ({ ...prev, [selectedPlugin.Id]: null }));
+      }, 5000);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -223,9 +281,14 @@ export const PluginEditor: React.FC<PluginEditorProps> = ({
       Object.entries(pluginConfig.properties).forEach(([key, config]) => {
         resetProps[key] = config.default;
       });
-      setProperties(resetProps);
+
+      setPluginConfigurations((prev) => ({
+        ...prev,
+        [selectedPlugin.Id]: resetProps,
+      }));
       setHasChanges((prev) => ({ ...prev, [selectedPlugin.Id]: false }));
       setValidationErrors((prev) => ({ ...prev, [selectedPlugin.Id]: {} }));
+      setSaveStatus((prev) => ({ ...prev, [selectedPlugin.Id]: null }));
     }
   };
 
@@ -268,12 +331,32 @@ export const PluginEditor: React.FC<PluginEditorProps> = ({
   const hasValidationErrors = Object.keys(currentPluginErrors).some(
     (key) => currentPluginErrors[key]
   );
-  const currentPluginHasChanges = hasChanges
-    ? hasChanges[selectedPlugin.Id]
-    : false;
+  const currentPluginHasChanges = hasChanges[selectedPlugin.Id] ?? false;
+  const currentPluginConfig = pluginConfigurations[selectedPlugin.Id] ?? {};
+  const currentSaveStatus = saveStatus[selectedPlugin.Id];
+  
+  // Check if plugin has existing configuration
+  const hasExistingConfig = selectedMonitor?.Configuration && 
+    selectedMonitor.Configuration.trim() !== '' && 
+    selectedMonitor.Configuration !== '{}';
+  
+  const handleCreateConfig = () => {
+    if (selectedPlugin && pluginConfig) {
+      const defaultConfig: PluginGenericProps = {};
+      Object.entries(pluginConfig.properties).forEach(([key, config]) => {
+        defaultConfig[key] = config.default;
+      });
+      
+      setPluginConfigurations((prev) => ({
+        ...prev,
+        [selectedPlugin.Id]: defaultConfig,
+      }));
+      setHasChanges((prev) => ({ ...prev, [selectedPlugin.Id]: true }));
+    }
+  };
 
   const renderPropertyInput = (key: string, config: PluginInputProps) => {
-    const value = properties[key];
+    const value = currentPluginConfig[key];
     const errors = validationErrors[selectedPlugin?.Id]?.[key] as Array<string>;
     const hasError = errors && errors.length > 0;
 
@@ -458,19 +541,26 @@ export const PluginEditor: React.FC<PluginEditorProps> = ({
           <div className="space-y-2">
             {selectedMonitor.PluginDetails.map((plugin) => {
               const config = PLUGIN_CONFIGS[plugin.Id];
-              const pluginHasChanges = hasChanges
-                ? hasChanges[plugin.Id]
-                : false;
+              const pluginHasChanges = hasChanges[plugin.Id] ?? false;
               const pluginHasErrors =
                 validationErrors[plugin.Id] &&
                 Object.keys(validationErrors[plugin.Id]).some(
                   (key) => validationErrors[plugin.Id][key]
                 );
+              const pluginSaveStatus = saveStatus[plugin.Id];
 
               return (
                 <div
                   key={plugin.Id}
                   onClick={() => setSelectedPluginId(plugin.Id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedPluginId(plugin.Id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                   className={`relative p-3 border rounded-lg cursor-pointer transition-colors ${
                     selectedPlugin.Id === plugin.Id
                       ? "bg-blue-50 border-blue-300"
@@ -487,19 +577,29 @@ export const PluginEditor: React.FC<PluginEditorProps> = ({
                       </div>
                     </div>
                     <div className="flex flex-col items-end ml-2 space-y-1">
-                      {pluginHasChanges ? (
+                      {pluginSaveStatus === "success" && (
+                        <CheckCircle2
+                          className="w-4 h-4 text-green-500"
+                          // title="Saved successfully"
+                        />
+                      )}
+                      {pluginSaveStatus === "error" && (
+                        <XCircle
+                          className="w-4 h-4 text-red-500"
+                          // title="Save failed"
+                        />
+                      )}
+                      {pluginHasChanges && !pluginSaveStatus && (
                         <div
                           className="w-2 h-2 bg-amber-400 rounded-full"
                           title="Has unsaved changes"
-                        ></div>
-                      ) : (
-                        <></>
+                        />
                       )}
                       {pluginHasErrors && (
                         <div
                           className="w-2 h-2 bg-red-400 rounded-full"
                           title="Has validation errors"
-                        ></div>
+                        />
                       )}
                     </div>
                   </div>
@@ -528,53 +628,83 @@ export const PluginEditor: React.FC<PluginEditorProps> = ({
                     <span className="text-sm text-gray-500">
                       Plugin ID: {selectedPlugin.Id}
                     </span>
+                    {hasExistingConfig ? (
+                      <Badge variant="outline" className="text-xs text-green-600">
+                        Configured
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs text-amber-600">
+                        No Configuration
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-6">
-                {Object.entries(pluginConfig.properties).map(
-                  ([key, config]) => (
-                    <div key={key} className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        {config.label}
-                        {/* Check if field is required from Zod schema */}
-                        {isZodObject(pluginConfig.schema) &&
-                          pluginConfig.schema.shape[key] &&
-                          !pluginConfig.schema.shape[key].isOptional() && (
-                            <span className="text-red-500 ml-1">*</span>
+              {!hasExistingConfig && Object.keys(currentPluginConfig).length === 0 ? (
+                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                  <Settings className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-medium mb-2">No Configuration Found</h3>
+                  <p className="text-gray-500 mb-4">
+                    This plugin doesn&apos;t have a configuration yet. Create one to get started.
+                  </p>
+                  <Button onClick={handleCreateConfig} className="px-6 py-2">
+                    Create Configuration
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {Object.entries(pluginConfig.properties).map(
+                    ([key, config]) => (
+                      <div key={key} className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          {config.label}
+                          {/* Check if field is required from Zod schema */}
+                          {isZodObject(pluginConfig.schema) &&
+                            pluginConfig.schema.shape[key] &&
+                            !pluginConfig.schema.shape[key].isOptional() && (
+                              <span className="text-red-500 ml-1">*</span>
+                            )}
+                        </label>
+                        {renderPropertyInput(key, config)}
+                        {config.type === "number" &&
+                          (config.min !== undefined ||
+                            config.max !== undefined) && (
+                            <div className="text-xs text-gray-500">
+                              Range: {config.min ?? "∞"} - {config.max ?? "∞"}
+                            </div>
                           )}
-                      </label>
-                      {renderPropertyInput(key, config)}
-                      {config.type === "number" &&
-                        (config.min !== undefined ||
-                          config.max !== undefined) && (
-                          <div className="text-xs text-gray-500">
-                            Range: {config.min ?? "∞"} - {config.max ?? "∞"}
-                          </div>
-                        )}
-                    </div>
-                  )
-                )}
-              </div>
+                        </div>
+                      )
+                    )}
+                </div>
+              )}
 
-              <div className="mt-8 flex items-center justify-between pt-6 border-t">
+              {(hasExistingConfig || Object.keys(currentPluginConfig).length > 0) && (
+                <div className="mt-8 flex items-center justify-between pt-6 border-t">
                 <div className="flex space-x-3">
                   <Button
                     onClick={handleSave}
                     disabled={
                       !currentPluginHasChanges ||
                       hasValidationErrors ||
-                      isValidating
+                      isValidating ||
+                      isSaving
                     }
                     className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                   >
                     <Save className="w-4 h-4 mr-2" />
-                    {isValidating ? "Validating..." : "Save Changes"}
+                    {isSaving
+                      ? "Saving..."
+                      : isValidating
+                      ? "Validating..."
+                      : "Save Changes"}
                   </Button>
                   <Button
                     onClick={handleReset}
-                    disabled={!currentPluginHasChanges || isValidating}
+                    disabled={
+                      !currentPluginHasChanges || isValidating || isSaving
+                    }
                     className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                   >
                     <RotateCcw className="w-4 h-4 mr-2" />
@@ -583,16 +713,36 @@ export const PluginEditor: React.FC<PluginEditorProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-3">
+                  {currentSaveStatus === "success" && (
+                    <div className="text-sm text-green-600 flex items-center">
+                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                      Saved successfully
+                    </div>
+                  )}
+                  {currentSaveStatus === "error" && (
+                    <div className="text-sm text-red-600 flex items-center">
+                      <XCircle className="w-4 h-4 mr-1" />
+                      Save failed
+                    </div>
+                  )}
                   {hasValidationErrors && (
                     <div className="text-sm text-red-600 flex items-center">
                       <AlertCircle className="w-4 h-4 mr-1" />
                       Validation errors
                     </div>
                   )}
-                  {currentPluginHasChanges && !hasValidationErrors && (
-                    <div className="text-sm text-amber-600 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" />
-                      Unsaved changes
+                  {currentPluginHasChanges &&
+                    !hasValidationErrors &&
+                    !currentSaveStatus && (
+                      <div className="text-sm text-amber-600 flex items-center">
+                        <AlertCircle className="w-4 h-4 mr-1" />
+                        Unsaved changes
+                      </div>
+                    )}
+                  {isSaving && (
+                    <div className="text-sm text-blue-600 flex items-center">
+                      <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mr-1"></div>
+                      Saving...
                     </div>
                   )}
                   {isValidating && (
@@ -602,7 +752,8 @@ export const PluginEditor: React.FC<PluginEditorProps> = ({
                     </div>
                   )}
                 </div>
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -615,143 +766,471 @@ interface PluginSelectorProps {
   editId: string | undefined;
   selectedPluginIds: string[];
   onAddPlugins: (Ids: string[]) => void;
+  onRemovePlugins?: (pluginIds: string[]) => void;
 }
+
+const EmptyState = ({ searchTerm }: { searchTerm: string }) => (
+  <div className="flex flex-col items-center justify-center py-12 text-center">
+    <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+    <h3 className="text-lg font-medium text-muted-foreground">
+      {searchTerm ? "No plugins found" : "No compatible plugins available"}
+    </h3>
+    <p className="text-sm text-muted-foreground mt-1">
+      {searchTerm
+        ? `Try adjusting your search term "${searchTerm}"`
+        : "No plugins are compatible with the selected device type"}
+    </p>
+  </div>
+);
+
+const PluginCard = React.memo(
+  ({
+    plugin,
+    isSelected,
+    isAlreadyAdded,
+    onToggle,
+    canRemove = false,
+  }: {
+    plugin: MonitorPlugin;
+    isSelected: boolean;
+    isAlreadyAdded: boolean;
+    onToggle: (pluginId: string) => void;
+    canRemove?: boolean;
+  }) => {
+    const handleClick = useCallback(() => {
+      onToggle(plugin.Id);
+    }, [plugin.Id, onToggle]);
+
+    const showAsRemovable = isAlreadyAdded && canRemove;
+
+    return (
+      <div
+        className={`group relative flex items-start gap-3 p-4 border rounded-lg transition-all duration-200 ${
+          showAsRemovable
+            ? "bg-destructive/5 border-destructive/30 hover:bg-destructive/10 cursor-pointer"
+            : isAlreadyAdded
+            ? "bg-muted/50 border-muted cursor-not-allowed opacity-60"
+            : isSelected
+            ? "bg-primary/10 border-primary shadow-sm cursor-pointer"
+            : "hover:bg-accent hover:shadow-sm cursor-pointer"
+        }`}
+        onClick={handleClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle(plugin.Id);
+          }
+        }}
+      >
+        <div className="flex-shrink-0 mt-1">
+          <Checkbox
+            checked={isSelected || (isAlreadyAdded && !showAsRemovable)}
+            disabled={isAlreadyAdded && !canRemove}
+            className={`h-5 w-5 ${
+              showAsRemovable
+                ? "data-[state=checked]:bg-destructive data-[state=checked]:border-destructive"
+                : ""
+            }`}
+            onChange={() => onToggle(plugin.Id)}
+          />
+        </div>
+
+        <div className="flex-shrink-0">
+          <div className="relative">
+            <Image
+              src="/globe.svg"
+              width={40}
+              height={40}
+              alt={`${plugin.Name} icon`}
+              className="rounded-md"
+            />
+            {isAlreadyAdded && !showAsRemovable && (
+              <div className="absolute -top-1 -right-1">
+                <CheckCircle2 className="h-4 w-4 text-green-600 bg-white rounded-full" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <FormLabel
+              className={`text-base font-medium cursor-pointer ${
+                showAsRemovable
+                  ? "group-hover:text-destructive"
+                  : "group-hover:text-primary"
+              }`}
+            >
+              {plugin.Name}
+            </FormLabel>
+            {plugin.isRecommended && (
+              <Badge variant="secondary" className="text-xs">
+                Recommended
+              </Badge>
+            )}
+            {isAlreadyAdded && !showAsRemovable && (
+              <Badge variant="outline" className="text-xs">
+                Already Added
+              </Badge>
+            )}
+            {showAsRemovable && (
+              <Badge variant="destructive" className="text-xs">
+                Click to Remove
+              </Badge>
+            )}
+          </div>
+          <FormDescription className="text-sm leading-relaxed">
+            {plugin.Description}
+          </FormDescription>
+          {plugin.pluginType && (
+            <div className="mt-2">
+              <Badge variant="outline" className="text-xs">
+                {plugin.pluginType}
+              </Badge>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+
+PluginCard.displayName = "PluginCard";
 
 export const PluginSelector: React.FC<PluginSelectorProps> = ({
   editId,
   selectedPluginIds,
   onAddPlugins,
+  onRemovePlugins,
 }) => {
   const [selected, setSelected] = useState<string[]>([]);
+  const [toRemove, setToRemove] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState("");
+  const [showRemovalMode, setShowRemovalMode] = useState(false);
+
+  // Custom hooks would be replaced with your actual implementations
   const debouncedSearchTerm = useDebouncedSearch(searchInput, 300);
+  const {
+    data: selectedMonitor,
+    isLoading: isMonitorsLoading,
+    error: monitorError,
+  } = useGetSingleMonitorQuery(editId! ?? "", {
+    skip: !editId,
+  });
+  const {
+    data: plugins,
+    isLoading: isPluginsLoading,
+    error: pluginsError,
+  } = useGetMonitorPluginsQuery();
 
-  const { data: monitors, isLoading: isMonitorsLoading } =
-    useGetAllMonitorsQuery();
-  const { data: plugins, isLoading } = useGetMonitorPluginsQuery();
-
-  const [serviceMonitors, setServiceMonitors] = useState<BaseMonitor[]>(
-    monitors ?? []
-  );
-  const [allPlugins, setAllPlugins] = useState<MonitorPlugin[]>(plugins ?? []);
-
-  const selectedDevice = serviceMonitors.find(
-    (service) => service.SystemMonitorId == editId
-  );
-
+  // Initialize selected plugins from monitor data
   useEffect(() => {
-    const initialize = async () => {
-      try {
-        setServiceMonitors(monitors ?? []);
-        setAllPlugins(plugins ?? []);
-        console.log(plugins);
+    if (selectedMonitor?.Plugins) {
+      setSelected(selectedMonitor.Plugins);
+    }
+  }, [selectedMonitor?.Plugins]);
 
-        if (selectedDevice?.Plugins) {
-          setSelected([...(selectedDevice?.Plugins ?? [])]);
-        }
-      } catch (err) {
-        console.error(err);
-      }
+  // Filter and search plugins
+  const { searchResults, stats } = useMemo(() => {
+    if (!plugins) {
+      return {
+        compatiblePlugins: [],
+        searchResults: [],
+        stats: { total: 0, compatible: 0, alreadyAdded: 0 },
+      };
+    }
+
+    // If no selectedMonitor (creating new service), show all plugins
+    if (!selectedMonitor) {
+      const searched = debouncedSearchTerm
+        ? plugins.filter(
+            (plugin) =>
+              plugin.Name.toLowerCase().includes(
+                debouncedSearchTerm.toLowerCase()
+              ) ||
+              plugin.Description.toLowerCase().includes(
+                debouncedSearchTerm.toLowerCase()
+              ) ||
+              plugin.pluginType
+                ?.toLowerCase()
+                .includes(debouncedSearchTerm.toLowerCase())
+          )
+        : plugins;
+
+      return {
+        compatiblePlugins: plugins,
+        searchResults: searched,
+        stats: {
+          total: plugins.length,
+          compatible: plugins.length,
+          alreadyAdded: 0,
+        },
+      };
+    }
+
+    // Debug logging
+    console.log('Available plugins:', plugins);
+    console.log('Selected monitor device:', selectedMonitor.Device);
+
+    // Filter by device compatibility - fallback to show all plugins if compatibility check fails
+    const compatible = plugins.filter((plugin) => {
+      const isCompatible = plugin.compatibleDeviceTypes?.includes(
+        selectedMonitor.Device as ServiceType
+      );
+      console.log(`Plugin ${plugin.Name} compatible:`, isCompatible, 'compatibleTypes:', plugin.compatibleDeviceTypes);
+      return isCompatible;
+    });
+
+    // If no compatible plugins found, show all plugins as fallback
+    const pluginsToShow = compatible.length > 0 ? compatible : plugins;
+
+    // Apply search filter
+    const searched = debouncedSearchTerm
+      ? pluginsToShow.filter(
+          (plugin) =>
+            plugin.Name.toLowerCase().includes(
+              debouncedSearchTerm.toLowerCase()
+            ) ||
+            plugin.Description.toLowerCase().includes(
+              debouncedSearchTerm.toLowerCase()
+            ) ||
+            plugin.pluginType
+              ?.toLowerCase()
+              .includes(debouncedSearchTerm.toLowerCase())
+        )
+      : pluginsToShow;
+
+    const alreadyAddedCount = searched.filter((plugin) =>
+      selectedPluginIds.includes(plugin.Id)
+    ).length;
+
+    console.log('Final search results:', searched);
+
+    return {
+      compatiblePlugins: compatible,
+      searchResults: searched,
+      stats: {
+        total: plugins.length,
+        compatible: compatible.length > 0 ? compatible.length : plugins.length,
+        alreadyAdded: alreadyAddedCount,
+      },
     };
+  }, [plugins, selectedMonitor, debouncedSearchTerm, selectedPluginIds]);
 
-    initialize();
-  }, [selectedDevice?.Plugins, monitors, plugins]);
-
-  // Filter plugins based on selected device type
-  const filteredPlugins = allPlugins.filter(
-    (plugin) =>
-      plugin.compatibleDeviceTypes.includes(
-        selectedDevice?.Device as ServiceType
-      ) || !selectedPluginIds.includes(plugin.Id)
+  const togglePlugin = useCallback(
+    (pluginId: string) => {
+      if (showRemovalMode && selectedPluginIds.includes(pluginId)) {
+        // Toggle removal selection for already added plugins
+        setToRemove((prev) =>
+          prev.includes(pluginId)
+            ? prev.filter((id) => id !== pluginId)
+            : [...prev, pluginId]
+        );
+      } else {
+        // Toggle selection for new plugins
+        setSelected((prev) =>
+          prev.includes(pluginId)
+            ? prev.filter((id) => id !== pluginId)
+            : [...prev, pluginId]
+        );
+      }
+    },
+    [showRemovalMode, selectedPluginIds]
   );
 
-  const toggleDevice = (deviceId: string) => {
-    setSelected((prev) =>
-      prev.includes(deviceId)
-        ? prev.filter((id) => id !== deviceId)
-        : [...prev, deviceId]
+  const handleAddSelected = useCallback(() => {
+    const newlySelected = selected.filter(
+      (id) => !selectedPluginIds.includes(id)
     );
-  };
+    onAddPlugins(newlySelected);
+    setSelected([]);
+  }, [selected, selectedPluginIds, onAddPlugins]);
 
-  const handleAddSelected = () => {
-    console.log(selected);
-    onAddPlugins(selected);
-  };
+  const handleRemoveSelected = useCallback(() => {
+    if (onRemovePlugins && toRemove.length > 0) {
+      onRemovePlugins(toRemove);
+      setToRemove([]);
+      setShowRemovalMode(false);
+    }
+  }, [toRemove, onRemovePlugins]);
 
-  if (isLoading || isMonitorsLoading) {
+  const handleClearSelection = useCallback(() => {
+    if (showRemovalMode) {
+      setToRemove([]);
+    } else {
+      setSelected([]);
+    }
+  }, [showRemovalMode]);
+
+  const toggleMode = useCallback(() => {
+    setShowRemovalMode((prev) => !prev);
+    setSelected([]);
+    setToRemove([]);
+  }, []);
+
+  const isLoading = isMonitorsLoading || isPluginsLoading;
+  const hasError = monitorError || pluginsError;
+  const newlySelectedCount = selected.filter(
+    (id) => !selectedPluginIds.includes(id)
+  ).length;
+  const toRemoveCount = toRemove.length;
+  const canRemovePlugins = Boolean(onRemovePlugins);
+  const hasAlreadyAddedPlugins = selectedPluginIds.length > 0;
+
+  if (isLoading) {
     return <LoadingEventUI />;
   }
 
+  if (hasError) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <p className="text-destructive">
+            Failed to load plugins or monitor data
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="">
-      {/* <CardHeader>
-        <CardTitle>Service Plugin Management</CardTitle>
-      </CardHeader>
-      <CardContent> */}
-      {/* <Form {...form}> */}
-      <div className="space-y-6 relative">
-        <div className="space-y-4">
+    <div className="space-y-6">
+      <div className="space-y-4">
+        {/* Search Input */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
-            placeholder="Search Monitors..."
-            value={debouncedSearchTerm}
+            placeholder="Search plugins by name, description, or category..."
+            value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-10"
           />
+        </div>
 
-          <Separator />
-          <div className="space-y-2 min-h-[80vh]">
-            <CardTitle>
-              Select Plugins for Service Device [{selectedDevice?.Device}] you
-              want to monitor.
+        {/* Stats */}
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span>{stats.compatible} compatible plugins</span>
+          {debouncedSearchTerm && <span>{searchResults.length} found</span>}
+          <span>{stats.alreadyAdded} already added</span>
+        </div>
+
+        <Separator />
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-lg">
+              {showRemovalMode ? "Remove Plugins from" : "Select Plugins for"}{" "}
+              {selectedMonitor?.Device || "Service"}
             </CardTitle>
-
-            {filteredPlugins.map((plugin) => (
-              <div
-                key={plugin.Id}
-                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
-                  selected.includes(plugin.Id)
-                    ? "bg-primary/10 border-primary"
-                    : "hover:bg-accent"
-                }`}
-                onClick={() => toggleDevice(plugin.Id)}
+            {showRemovalMode && (
+              <p className="text-sm text-muted-foreground">
+                Select plugins to remove from monitoring
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {canRemovePlugins && hasAlreadyAddedPlugins && (
+              <Button
+                variant={showRemovalMode ? "destructive" : "outline"}
+                size="sm"
+                onClick={toggleMode}
               >
-                <Checkbox
-                  className="checkbox-input absolute inline-block form-checkbox bg-transparent rounded-full h-8 w-8 text-indigo-600"
-                  checked={selected.includes(plugin.Id)}
-                />
-                <div className="flex-1">
-                  <span className="checkbox-tile">
-                    <Image
-                      aria-hidden
-                      src={"/" + "globe" + ".svg"}
-                      className="px-5 checkbox-icon"
-                      width={50}
-                      height={50}
-                      alt={plugin.Description}
-                    />
-                  </span>
-                  <FormLabel className="checkbox-label text-lg ml-2 font-medium --text-sm">
-                    {plugin.Name}
-                  </FormLabel>
-
-                  <FormDescription>{plugin.Description}</FormDescription>
-                </div>
-              </div>
-            ))}
+                {showRemovalMode ? "Cancel Remove" : "Remove Plugins"}
+              </Button>
+            )}
+            {(selected.length > 0 || toRemove.length > 0) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearSelection}
+              >
+                Clear Selection
+              </Button>
+            )}
           </div>
         </div>
 
-        <SheetFooter className=" w-full">
-          <Button
-            type="button"
-            disabled={selected.length === 0}
-            onClick={handleAddSelected}
-          >
-            Add Selected ({selected.length})
-          </Button>
-        </SheetFooter>
+        {/* Plugin List */}
+        <div className="space-y-3 min-h-[60vh] max-h-[60vh] overflow-y-auto">
+          {searchResults.length === 0 ? (
+            <EmptyState searchTerm={debouncedSearchTerm} />
+          ) : (
+            searchResults.map((plugin) => {
+              const isAlreadyAdded = selectedPluginIds.includes(plugin.Id);
+              const isSelectedForAddition = selected.includes(plugin.Id);
+              const isSelectedForRemoval = toRemove.includes(plugin.Id);
+
+              // Show plugin if:
+              // 1. Not in removal mode, OR
+              // 2. In removal mode and plugin is already added
+              const shouldShow = !showRemovalMode || isAlreadyAdded;
+
+              if (!shouldShow) return null;
+
+              return (
+                <PluginCard
+                  key={plugin.Id}
+                  plugin={plugin}
+                  isSelected={
+                    showRemovalMode
+                      ? isSelectedForRemoval
+                      : isSelectedForAddition
+                  }
+                  isAlreadyAdded={isAlreadyAdded}
+                  onToggle={togglePlugin}
+                  canRemove={showRemovalMode}
+                />
+              );
+            })
+          )}
+        </div>
       </div>
-      {/* </Form> */}
-      {/* </CardContent> */}
+
+      {/* Footer Actions */}
+      <SheetFooter className="w-full gap-2">
+        <div className="flex items-center justify-between w-full">
+          <div className="text-sm text-muted-foreground">
+            {showRemovalMode
+              ? toRemoveCount > 0 && (
+                  <span className="text-destructive">
+                    {toRemoveCount} plugin{toRemoveCount !== 1 ? "s" : ""}{" "}
+                    selected for removal
+                  </span>
+                )
+              : newlySelectedCount > 0 && (
+                  <span>
+                    {newlySelectedCount} new plugin
+                    {newlySelectedCount !== 1 ? "s" : ""} selected
+                  </span>
+                )}
+          </div>
+
+          {showRemovalMode ? (
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={toRemoveCount === 0}
+              onClick={handleRemoveSelected}
+              className="min-w-[140px]"
+            >
+              Remove Selected ({toRemoveCount})
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              disabled={newlySelectedCount === 0}
+              onClick={handleAddSelected}
+              className="min-w-[140px]"
+            >
+              Add Selected ({newlySelectedCount})
+            </Button>
+          )}
+        </div>
+      </SheetFooter>
     </div>
   );
 };

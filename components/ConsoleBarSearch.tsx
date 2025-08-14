@@ -235,12 +235,12 @@ const ConsoleBarSearch = ({
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
+      <PopoverTrigger asChild className="max-sm:hidden">
         <Button
           variant="outline"
           disabled={disabled}
           className={cn(
-            "relative h-9 w-full justify-between px-3 text-sm text-muted-foreground sm:pr-12 md:w-64 lg:w-96",
+            "relative h-10 justify-between px-3 text-sm text-muted-foreground sm:pr-12",
             className
           )}
         >
@@ -252,7 +252,7 @@ const ConsoleBarSearch = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-full p-0 sm:w-[32rem]"
+        className="--w-full p-0 --sm:w-[40rem]"
         align="start"
         sideOffset={10}
       >

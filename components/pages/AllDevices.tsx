@@ -1,7 +1,7 @@
 "use client";
 
 import { db } from "@/lib/helpers/service/db/db.service";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import HexagonGridView from "../HexagonGridView";
 import LoadingEventUI from "../LoadingUI";
 import { webSocketService } from "@/lib/helpers/service/websocket.service";
@@ -12,42 +12,34 @@ import { Card, CardTitle, CardHeader } from "@/components/ui/card";
 const AllDevices = () => {
   const [devices, setDevices] = useState<BaseMonitor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(webSocketService.isConnected);
 
-  // if (!webSocketService.isConnected) {
-  //   toast("Dashboard is disconnected. Attempting to reconnect...", {
-  //     action: {
-  //       label: "Reconnect Now",
-  //       onClick: () => webSocketService.handleReconnect(),
-  //     },
-  //     dismissible: webSocketService.isConnected,
-  //     icon: <WifiOff color="red" />,
+  const updateDevices = useCallback(async () => {
+    const loadedDevices = await db.getAllDevices();
+    setDevices(loadedDevices);
+  }, []);
 
-  //     duration: 315000,
-  //   });
-  // }
-
-  useEffect(() => {
-    if (!webSocketService.isConnected) {
+  const handleConnectionChange = useCallback((connected: boolean) => {
+    setIsConnected(connected);
+    if (!connected) {
       toast("Dashboard is disconnected. Attempting to reconnect...", {
         action: {
           label: "Reconnect Now",
           onClick: () => webSocketService.handleReconnect(),
         },
-        dismissible: webSocketService.isConnected,
+        dismissible: false,
         icon: <WifiOff color="red" />,
-
         duration: 315000,
       });
-
-      db.removeDevices();
     }
+  }, []);
 
+  useEffect(() => {
     const loadData = async () => {
       await db.initialize();
-
       const loadedDevices = await db.getAllDevices();
-      console.log(loadedDevices);
-      if (loadedDevices.length === 0) {
+      
+      if (loadedDevices.length === 0 && !webSocketService.isConnected) {
         toast("Dashboard has no data. Attempting to reconnect...", {
           action: {
             label: "Reconnect Now",
@@ -55,18 +47,41 @@ const AllDevices = () => {
           },
           dismissible: false,
           icon: <WifiOff color="red" />,
-
-          //duration: 15000,
         });
-      } else {
-        setDevices(loadedDevices);
       }
+      
       setDevices(loadedDevices);
       setIsLoading(false);
     };
 
     loadData();
-  }, []);
+
+    // Subscribe to real-time updates
+    const unsubscribeDeviceUpdate = webSocketService.subscribe('deviceUpdate', updateDevices);
+    const unsubscribeDevicesUpdate = webSocketService.subscribe('devicesUpdate', updateDevices);
+    
+    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+    const unsubscribeConnection = webSocketService.subscribe('connectionChange', (data: any) => {
+      handleConnectionChange(data.connected);
+    });
+
+    // Track connection state changes
+    const checkConnection = () => {
+      const currentConnection = webSocketService.isConnected;
+      if (currentConnection !== isConnected) {
+        handleConnectionChange(currentConnection);
+      }
+    };
+
+    const connectionInterval = setInterval(checkConnection, 1000);
+
+    return () => {
+      unsubscribeDeviceUpdate();
+      unsubscribeDevicesUpdate();
+      unsubscribeConnection();
+      clearInterval(connectionInterval);
+    };
+  }, [updateDevices, handleConnectionChange, isConnected]);
 
   if (isLoading) {
     return (
@@ -87,13 +102,10 @@ const AllDevices = () => {
 
             <div
               className={`signal ${
-                webSocketService.isConnected ? "active" : "inactive"
-              } inline-flex items-center gap-2 p-2 rounded text-lg font-bold`}
+                isConnected ? "active" : "inactive"
+              } inline-flex items-center gap-2 p-1 rounded text-lg font-bold`}
             >
-              <p>
-                Dashboard{" "}
-                {`${webSocketService.isConnected ? "Online" : "Offline"}`}
-              </p>
+              <p className="uppercase italic">{`${isConnected ? "Online" : "Offline"}`}</p>
             </div>
           </CardTitle>
         </CardHeader>

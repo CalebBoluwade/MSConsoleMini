@@ -29,13 +29,14 @@ export class DeviceWebSocketService {
     return DeviceWebSocketService.instance;
   }
 
-  private async connect() {
+  private connect() {
     this.socket = new WebSocket(this.url);
 
     this.socket.onopen = () => {
       console.log("WebSocket connected");
       this._isConnected = true;
       this.reconnectAttempts = 0;
+      this.notifySubscribers('connectionChange', { type: 'connectionChange', connected: true });
     };
 
     this.socket.onmessage = async (event) => {
@@ -44,9 +45,10 @@ export class DeviceWebSocketService {
         if (typeof window !== "undefined") {
           await db.initialize();
 
-          console.log(message, Array.isArray(message))
+          console.log(message, Array.isArray(message));
           if (Array.isArray(message)) {
             await db.addDevices(message);
+            this.notifySubscribers('devicesUpdate', { type: 'devicesUpdate', data: message });
             return;
           }
         }
@@ -55,6 +57,7 @@ export class DeviceWebSocketService {
           case "initialDevices":
             this.initialDataResolvers.devices.forEach((r) => r(message.data));
             this.initialDataResolvers.devices = [];
+            this.notifySubscribers('devicesUpdate', message);
             break;
 
           case "initialGroups":
@@ -72,9 +75,10 @@ export class DeviceWebSocketService {
       }
     };
 
-    this.socket.onclose = () => {
+    this.socket.onclose = async () => {
       this._isConnected = false;
       console.warn("WebSocket disconnected");
+      this.notifySubscribers('connectionChange', { type: 'connectionChange', connected: false });
       this.handleReconnect();
     };
 
@@ -83,7 +87,7 @@ export class DeviceWebSocketService {
     };
   }
 
-   // Public getter (read-only outside the class)
+  // Public getter (read-only outside the class)
   public get isConnected(): boolean {
     return this._isConnected;
   }

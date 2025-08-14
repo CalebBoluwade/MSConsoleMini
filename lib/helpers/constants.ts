@@ -1,24 +1,4 @@
-// export const NetworkDevicesTypes = ""
-
 export type statuses = Array<StatusText>;
-
-// Health ranking for sorting
-// export const healthStatusRanking: StatusRanking = {
-//   Good: {
-//     I: 0,
-//     Color: "#4CAF50",
-//   },
-//   Moderate: {
-//     I: 1,
-//     Color: "#FFC107",
-//   },
-//   Bad: {
-//     I: 2,
-//     Color: "#F44336",
-//   },
-// };
-
-// Get status color
 
 export enum NetworkDevicesTypes {
   Switch,
@@ -41,9 +21,9 @@ export enum Devices {
 }
 
 export enum PluginTypes {
-  HTTPMonitor = "http_monitor",
+  HTTPMonitor = "HTTPMonitor",
   SSLMonitor = "SSLChecker",
-  DatabaseMonitor = "database-monitor",
+  DatabaseMonitor = "DatabaseMonitor",
   AgentMonitor = "AgentMonitor",
 }
 

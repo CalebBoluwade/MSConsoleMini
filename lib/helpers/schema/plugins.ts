@@ -4,8 +4,8 @@ import { HttpMethodsValues, PluginTypes } from "../constants";
 // Base schema for all plugins
 export const basePluginSchema = z.object({
   enabled: z.boolean().default(true),
-  name: z.string().min(1, "Plugin name is required"),
-  description: z.string().optional(),
+  // name: z.string().min(1, "Plugin name is required"),
+  // description: z.string().optional(),
 });
 
 // Zod schemas for each plugin type
@@ -24,6 +24,25 @@ const HttpMonitorSchema = basePluginSchema.extend({
   Method: z.enum(HttpMethodsValues),
   ContentType: z.string().optional(),
   postData: z.object({}),
+});
+
+const AgentMonitorSchema = basePluginSchema.extend({
+  cpu: z.boolean(),
+  memory: z.boolean(),
+  disk: z.boolean(),
+
+  high: z
+    .number()
+    .min(70, "Threshold must be at least 70")
+    .max(100, "Threshold must be at most 100"),
+  mid: z
+    .number()
+    .min(50, "Threshold must be at least 70")
+    .max(70, "Threshold must be at most 100"),
+  low: z
+    .number()
+    .min(0, "Threshold must be at least 70")
+    .max(50, "Threshold must be at most 100"),
 });
 
 const SSLMonitorSchema = basePluginSchema.extend({
@@ -287,31 +306,43 @@ export const PLUGIN_CONFIGS: Record<string, PluginConfig> = {
   },
   [PluginTypes.AgentMonitor]: {
     name: "Agent Health",
-    schema: HttpMonitorSchema,
+    schema: AgentMonitorSchema,
     properties: {
-      customAgentPort: {
-        type: "text",
-        label: "Custom Agent Port",
-        default: "30025",
-        min: 80,
-        max: 60000,
-      },
-      useSSL: {
+      cpu: {
         type: "boolean",
-        label: "Use Agent SSL (HTTPS)",
-        default: true,
+        label: "Enable CPU Monitoring",
+        default: false,
       },
-      timeout: {
+      memory: {
+        type: "boolean",
+        label: "Enable System Memory Usage Monitoring",
+        default: false,
+      },
+      disk: {
+        type: "boolean",
+        label: "Enable System Disk Utilization Monitoring",
+        default: false,
+      },
+      high: {
         type: "number",
-        label: "Timeout (seconds)",
-        default: 30,
-        min: 1,
-        max: 300,
+        label: "High Threshold",
+        default: 70,
+        min: 70,
+        max: 100,
       },
-      userAgent: {
-        type: "text",
-        label: "User Agent",
-        default: "System Monitor Bot",
+      mid: {
+        type: "number",
+        label: "Mid Threshold",
+        default: 50,
+        min: 50,
+        max: 70,
+      },
+      low: {
+        type: "number",
+        label: "Low Threshold",
+        default: 15,
+        min: 0,
+        max: 50,
       },
     },
   },

@@ -2,16 +2,15 @@
 
 import React, { useLayoutEffect, useState } from "react";
 import { Orbitron } from "next/font/google";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Bell,
+  BellRing,
   Blocks,
-  ChevronLeft,
   Cog,
   Group,
   LayoutDashboard,
   LogOut,
-  Menu,
   Navigation,
   ServerCrash,
   Settings,
@@ -44,10 +43,7 @@ import { useGetAllMonitorsQuery } from "@/lib/helpers/api/MonitorService";
 
 const orbitron = Orbitron({ subsets: ["latin"] });
 const ConsoleBar = () => {
-  const router = useRouter();
   const pathname = usePathname();
-
-  const [sideMenuOpen, setSideMenuOpen] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const { data: monitors, isLoading: isMonitorsLoading } =
@@ -84,17 +80,12 @@ const ConsoleBar = () => {
   // absolute right-5 left-[5.9rem]
 
   return (
-    <header className="fixed top-0 right-0 left-0 flex flex-row items-center px-5 py-1 justify-between transition-all shadow-md dark:bg-dark-tremor-brand-faint/35 backdrop-blur-sm bg-opacity-70">
-      <div className="items-center inline-flex gap-3 font-bold">
-        {!sideMenuOpen ? <ChevronLeft onClick={() => router.back()} /> : <></>}
-
-        {/* <SidebarTrigger> */}
-        <Menu onClick={() => setSideMenuOpen(!sideMenuOpen)} />
-        {/* </SidebarTrigger> */}
-
+    <header className="fixed top-0 right-0 left-0 flex flex-row items-center px-5 py-1 justify-between gap-2 transition-all shadow-md dark:bg-dark-tremor-brand-faint/35 backdrop-blur-sm bg-opacity-70">
+      <div className="items-center flex gap-3 font-bold w-full">
         <p className="text-md capitalize">{getCurrentPageHeader(pathname)}</p>
         <ConsoleBarSearch
           isLoading={isMonitorsLoading}
+          className="w-full"
           placeholder="Console Search"
           devices={serviceMonitors}
           // groups={async () => await db.getAllGroups()}
@@ -133,6 +124,7 @@ const ConsoleBar = () => {
             </DialogTitle>
             <Link
               href={"/"}
+              onClick={() => setIsDialogOpen(false)}
               className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
             >
               <LayoutDashboard size={28} className="mr-2" />
@@ -140,6 +132,7 @@ const ConsoleBar = () => {
             </Link>
             <Link
               href={"/console/groups"}
+              onClick={() => setIsDialogOpen(false)}
               className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
             >
               <Group size={28} className="mr-2" />
@@ -147,6 +140,7 @@ const ConsoleBar = () => {
             </Link>
             <Link
               href={"/console/monitors"}
+              onClick={() => setIsDialogOpen(false)}
               className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
             >
               <ServerCrash size={28} className="mr-2" />
@@ -154,6 +148,7 @@ const ConsoleBar = () => {
             </Link>
             <Link
               href={"/console/plugins"}
+              onClick={() => setIsDialogOpen(false)}
               className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
             >
               <Blocks size={28} className="mr-2" />
@@ -161,13 +156,23 @@ const ConsoleBar = () => {
             </Link>
             <Link
               href={"/console/integrations"}
+              onClick={() => setIsDialogOpen(false)}
               className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
             >
               <SquaresIntersect size={28} className="mr-2" />
               <span>Integrations</span>
             </Link>
             <Link
+              href={"/console/alerts"}
+              onClick={() => setIsDialogOpen(false)}
+              className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
+            >
+              <BellRing size={28} className="mr-2" />
+              <span>Alerts</span>
+            </Link>
+            <Link
               href={"/"}
+              onClick={() => setIsDialogOpen(false)}
               className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
             >
               <Cog size={28} className="mr-2" />
@@ -181,8 +186,11 @@ const ConsoleBar = () => {
         <div className="relative flex items-center gap-3 p-2 cursor-pointer hover:bg-muted">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Avatar className="h-6 w-6">
-                <AvatarImage src="/avatars/01.png" alt="Avatar" />
+              <Avatar className="h-8 w-8 rounded-full">
+                <AvatarImage
+                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face"
+                  alt="Avatar"
+                />
                 <AvatarFallback>CB</AvatarFallback>
               </Avatar>
             </DropdownMenuTrigger>

@@ -49,9 +49,9 @@ import {
 } from "@/lib/hooks/useStatusHooks";
 import { formatDateTime } from "@/lib/helpers/utils";
 import { Timeline } from "../Timeline";
-// import DeployNewAgent from "../forms/NewAgent";
 import SystemChart from "../CPUChart";
 import DiskDrive from "../DiskDrive";
+import DeployNewAgent from "../forms/NewAgent";
 
 const ServiceDetails: React.FC = () => {
   const { SystemMonitorId } = useParams();
@@ -63,10 +63,13 @@ const ServiceDetails: React.FC = () => {
     useState<MonitoringResult | null>();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const { data: selectedMonitor, isLoading: isMonitorLoading } =
-    useGetSingleMonitorQuery(SystemMonitorId!.toString() ?? "", {
-      skip: !SystemMonitorId!.toString(),
-    });
+  const {
+    data: selectedMonitor,
+    isLoading: isMonitorLoading,
+    refetch,
+  } = useGetSingleMonitorQuery(SystemMonitorId!.toString() ?? "", {
+    skip: !SystemMonitorId!.toString(),
+  });
 
   const {
     data: monitorResults,
@@ -77,13 +80,13 @@ const ServiceDetails: React.FC = () => {
     skip: !SystemMonitorId,
   });
 
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-
   const uniqueMonitorResults = useGroupedMonitorResults(monitorResults ?? []);
   const healthyCount = uniqueMonitorResults.filter(
     (m) => m.status.toLowerCase() === "healthy"
   ).length;
   const totalCount = uniqueMonitorResults.length;
+
+  console.log(healthyCount / totalCount);
 
   useEffect(() => {
     if (SystemMonitorId) {
@@ -96,14 +99,20 @@ const ServiceDetails: React.FC = () => {
           router.push("/console/monitors");
           return;
         }
-        setLastUpdated(new Date());
+  
       } catch (error) {
         console.error("Error loading data:", error);
       }
     }
 
     return () => {};
-  }, [SystemMonitorId, selectedMonitor, isMonitorLoading, monitorResults, router]);
+  }, [
+    SystemMonitorId,
+    selectedMonitor,
+    isMonitorLoading,
+    monitorResults,
+    router,
+  ]);
 
   const handleSuccess = async () => {
     setIsDialogOpen(false);
@@ -129,12 +138,25 @@ const ServiceDetails: React.FC = () => {
   }
 
   if (error || !selectedMonitor) {
-    return <p>Error loading data</p>;
+    return (
+      <div className="h-[calc(100dvh-150px)] w-full flex justify-center items-center gap-3">
+        Error loading data
+        <Button
+          variant={"outline"}
+          onClick={() => {
+            refetch();
+            refetchResults();
+          }}
+        >
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   return (
-    <div className="p-4 space-y-6">
-      <div className="space-y-6 py-6 px-2">
+    <div className="px-4 space-y-6">
+      <div className="space-y-6 px-2">
         <div className="grid grid-cols-2 max-md:grid-cols-1 grid-flow-col items-center gap-6">
           <Card className="py-2 min-w-[225px]">
             <CardHeader>
@@ -174,7 +196,12 @@ const ServiceDetails: React.FC = () => {
                       <BellRingIcon className="w-4 h-4" />
                       Configure Notification Receipients
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setAgentDialogOpen(true)}>
+                    <DropdownMenuItem
+                      disabled={!!selectedMonitor?.Agent}
+                      onClick={() =>
+                        selectedMonitor?.Agent ? setAgentDialogOpen(true) : null
+                      }
+                    >
                       <AppWindowMac className="w-4 h-4" />
                       Deploy Agent
                     </DropdownMenuItem>
@@ -196,10 +223,18 @@ const ServiceDetails: React.FC = () => {
                 </DropdownMenu>
               </CardTitle>
 
-              <div className="text-sm text-right text-gray-500 flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                Last updated: {lastUpdated.toLocaleTimeString()}
-              </div>
+              {selectedMonitor.Metadata ? (
+                <div className="text-sm text-right text-gray-500 flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  Last updated:{" "}
+                  {new Date(selectedMonitor.Metadata.LastCheckTime!).toLocaleTimeString()}
+                </div>
+              ) : (
+                <div className="text-sm text-right text-gray-500 flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  Last updated: Unknown
+                </div>
+              )}
             </CardHeader>
 
             <CardContent className="space-y-3">
@@ -213,13 +248,13 @@ const ServiceDetails: React.FC = () => {
                 IPAddress: {selectedMonitor?.IPAddress}
               </CardDescription>
               <CardDescription>
-                Created: {selectedMonitor?.Port}
+                Created: {selectedMonitor?.CreatedAt}
               </CardDescription>
             </CardContent>
           </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 h-full --col-span-2 gap-6">
-            <Card className="py-2 border-l-4 border-l-green-500">
+            {/* <Card className="py-2 border-l-4 border-l-green-500">
               <CardHeader className="pb-3">
                 <CardTitle className="text-xl font-medium text-gray-600">
                   Service Health
@@ -234,7 +269,7 @@ const ServiceDetails: React.FC = () => {
                 </div>
                 <p className="text-sm text-gray-600 mt-1">Systems Online</p>
               </CardContent>
-            </Card>
+            </Card> */}
 
             <Card className="py-2 border-l-4 border-l-blue-500">
               <CardHeader className="pb-3">
@@ -333,8 +368,8 @@ const ServiceDetails: React.FC = () => {
                   </Card>
                 ))
             ) : (
-              <CardDescription className="text-gray-500 text-center">
-                No Data Available
+              <CardDescription className="text-gray-500 p-3 text-center">
+                History Not Available
               </CardDescription>
             )}
           </CardContent>
@@ -348,7 +383,7 @@ const ServiceDetails: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <PluginEditor selectedMonitor={selectedMonitor!} />
+            <PluginEditor selectedMonitor={selectedMonitor} />
           </motion.div>
         </AnimatePresence>
       </section>
@@ -390,35 +425,6 @@ const ServiceDetails: React.FC = () => {
                 {selectedMonitorResult.pluginResults &&
                   selectedMonitorResult.pluginResults.length > 0 && (
                     <div className="space-y-2">
-                      {/* {selectedMonitorResult.pluginResults.map(
-                        (plugin, index) => (
-                          <Card
-                            key={index + 1}
-                            className="rounded-lg p-2 border"
-                          >
-                            <CardHeader className="px-2 flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                {StatusIcon(plugin.status)}
-                                <CardTitle className="font-medium">
-                                  {plugin.servicePluginId ?? "Default Plugin"}
-                                </CardTitle>
-                              </div>
-                              <StatusBadge status={plugin.status}>
-                                {plugin.status}
-                              </StatusBadge>
-                            </CardHeader>
-                            <CardContent>
-                              <CardDescription className="px-2 text-sm text-gray-700 mb-2">
-                                {plugin.output}
-                              </CardDescription>
-                              <p className="text-xs text-gray-500">
-                                Checked at: {formatDateTime(plugin.checkedAt)}
-                              </p>
-                            </CardContent>
-                          </Card>
-                        )
-                      )} */}
-
                       <Timeline items={selectedMonitorResult.pluginResults} />
                     </div>
                   )}
@@ -506,10 +512,7 @@ const ServiceDetails: React.FC = () => {
             onOpenChange={setAgentDialogOpen}
           >
             <DialogContent>
-              {/* <DeployNewAgent
-                IP={selectedMonitor!.IPAddress}
-                Port={selectedMonitor!.Port}
-              /> */}
+              <DeployNewAgent IP={selectedMonitor.IPAddress} />
             </DialogContent>
           </Dialog>
         </AnimatePresence>

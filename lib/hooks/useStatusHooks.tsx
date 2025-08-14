@@ -13,19 +13,19 @@ import { Badge } from "@/components/ui/badge";
 export const StatusIcon = (status: string) => {
   switch ((status ?? "").toLowerCase()) {
     case "healthy":
-      return <CheckCircle className="min-h-5 min-w-5 text-[#10B981]" />;
+      return <CheckCircle className="min-h-4 min-w-4 text-[#10B981]" />;
     case "escalation":
-      return <AlertCircle className="min-h-5 min-w-5 text-[#f59e0b]" />;
+      return <AlertCircle className="min-h-4 min-w-4 text-[#f59e0b]" />;
     case "acknowledged":
-      return <BellOffIcon className="min-h-5 min-w-5 text-[#3b82f6]" />;
+      return <BellOffIcon className="min-h-4 min-w-4 text-[#3b82f6]" />;
     case "degraded":
-      return <MonitorX className="min-h-5 min-w-5 text-[#ef4444]" />;
+      return <MonitorX className="min-h-4 min-w-4 text-[#ef4444]" />;
     case "invalidconfiguration":
-      return <Bolt className="min-h-5 min-w-5 text-[#6b7280]" />;
+      return <Bolt className="min-h-4 min-w-4 text-[#6b7280]" />;
     case "scheduled":
-      return <CalendarX className="min-h-5 min-w-5 text-[#8b5cf6]" />;
+      return <CalendarX className="min-h-4 min-w-4 text-[#8b5cf6]" />;
     default:
-      return <Activity className="min-h-5 min-w-5 text-[#6b7280]" />;
+      return <Activity className="min-h-4 min-w-4 text-[#6b7280]" />;
   }
 };
 
@@ -82,7 +82,7 @@ export const TremorColor = (status: string): string => {
     case "scheduled":
       return "purple";
     default:
-      return "gray";
+      return "slate";
   }
 };
 

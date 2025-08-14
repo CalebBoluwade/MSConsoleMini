@@ -56,45 +56,6 @@ export function Timeline({ items, className }: Readonly<TimelineProps>) {
       <TimelineConnector />
 
       <div className="space-y-8">
-        <div className="relative pl-8">
-          <TimelineIcon>{PluginTypeIcon("")}</TimelineIcon>
-
-          {/* Content */}
-          <div className="ml-4 flex-1 group-hover:translate-x-2 transition-all duration-300">
-            <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-600">
-                      {formatDate(items[0].checkedAt)}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <StatusBadge status={items[0].status}>
-                      {items[0].status}
-                    </StatusBadge>
-                    <StatusBadge status={"Healthy"}>
-                      {"Basic Health"}
-                    </StatusBadge>
-                  </div>
-                </div>
-                <CardTitle className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                  {"default"}
-                </CardTitle>
-                <CardDescription className="text-gray-600 ">
-                  {items[0].pluginName}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 p-3 rounded-lg">
-                  {items[0].output}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
         {items.map((item, index) => (
           <div key={index + 1} className="relative pl-8">
             <TimelineIcon>{PluginTypeIcon(item.pluginType)}</TimelineIcon>

@@ -9,6 +9,7 @@ type MonitorPlugin = {
   Name: string;
   Description: string;
   pluginType: string;
+  isRecommended?: boolean;
   compatibleDeviceTypes: ServiceType[];
   comingSoon?: boolean;
   // [key: string]: any;
@@ -55,7 +56,7 @@ interface BaseMonitor {
   // HealthStatus: "Good" | "Moderate" | "Bad" | "Unavailable";
   Device: string;
   IsMonitored: boolean;
-  // LiveCheckFlag: number; // 0 | 1 | 2 | 3 | 4 | 5
+  CreatedAt: string;
   IsServiceIssueAcknowledged: boolean;
   // CreatedAt: string;
   Metadata: MonitorMetaData;

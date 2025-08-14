@@ -2,16 +2,19 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { MonitorAPI } from "../api/MonitorService";
 import { RemoteMonitorsAPI } from "../api/RemoteService";
+import { AgentAPI } from "../api/AgentService";
 
 export const store = configureStore({
   reducer: {
     [MonitorAPI.reducerPath]: MonitorAPI.reducer,
     [RemoteMonitorsAPI.reducerPath]: RemoteMonitorsAPI.reducer,
+    [AgentAPI.reducerPath]: AgentAPI.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(MonitorAPI.middleware)
-      .concat(RemoteMonitorsAPI.middleware),
+      .concat(RemoteMonitorsAPI.middleware)
+      .concat(AgentAPI.middleware),
 });
 
 // For typed hooks

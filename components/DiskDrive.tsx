@@ -22,15 +22,27 @@ const DiskDrive = ({ AgentId }: { AgentId: string | null }) => {
     }
   );
 
-  let content: React.JSX.Element = <>No Data</>;
+  let content: React.JSX.Element = (
+    <div className="h-full w-full flex justify-center items-center">
+      No Data
+    </div>
+  );
   console.log(AgentId, diskData, diskDataLoading, diskDataError);
 
-  if (diskDataLoading) {
-    content = <LoadingEventUI />;
-  }
+  // if (diskDataLoading) {
+  //   content = <LoadingEventUI />;
+  // }
 
-  if (diskDataError) {
-    content = <p>Error loading data</p>;
+  // if (diskDataError) {
+  //   content = <p>Error loading data</p>;
+  // }
+
+  if ((diskData ?? []).length) {
+    content = (
+      <div className="relative h-64">
+        {diskDataLoading || diskDataError ? <LoadingEventUI /> : <></>}
+      </div>
+    );
   }
 
   if ((diskData ?? []).length) {

@@ -58,7 +58,9 @@ export class MonitorGroupDB {
   }
 
   private setupWebSocketListeners() {
-    webSocketService.subscribe("deviceUpdate", async (device: BaseMonitor) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    webSocketService.subscribe("deviceUpdate", async (data: any) => {
+      const device = data.data || data;
       await this.db.put("devices", device);
     });
 
@@ -120,13 +122,25 @@ export class MonitorGroupDB {
     const store = tx.objectStore("devices");
     for (const device of devices) {
       await store.put(device);
-      // webSocketService.send("deviceUpdated", device);
     }
     await tx.done;
   }
 
   async removeDevices(): Promise<void> {
-    return this.db.deleteObjectStore("MonitorGroupsDB");
+    if (!this.db) {
+      console.error("DB not initialized");
+      return;
+    }
+
+    const tx = this.db.transaction("devices", "readwrite");
+    const store = tx.objectStore("devices");
+
+    const devices = await this.getAllDevices();
+
+    devices.forEach((d) => store.delete(d.SystemMonitorId));
+
+    tx.oncomplete = () => console.log("Devices removed");
+    tx.onerror = (e) => console.error("Error removing devices", e.target);
   }
 
   async getAllDevices(): Promise<BaseMonitor[]> {
