@@ -121,7 +121,7 @@ const MonitorTable = ({
               onCancel={() => {
                 setMonitoredDialogOpen(false);
               }}
-              customTrigger={<></>}
+              customTrigger={<span></span>}
             />
           </>
         );

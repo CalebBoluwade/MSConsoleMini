@@ -25,6 +25,14 @@ export const SITE_MAP: PageMap = {
     path: "/console",
     header: "Observability"
   },
+  SERVICE_TRACKER: {
+    metadata: {
+      title: "Service Tracker | MS APM",
+      description: "Track the status and performance of your services.",
+    },
+    path: "/console/monitors/services",
+    header: "Service Tracker"
+  },
   OBSERVABILITY: {
     metadata: {
       title: "Observability | MS APM",

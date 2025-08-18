@@ -115,6 +115,7 @@ const PluginConfigurationEditor: React.FC<PluginEditorProps> = ({
 
           // Initialize with defaults and existing values
           Object.entries(config.fields).forEach(([key, propConfig]) => {
+            console.log(key, existingConfig[key], propConfig.default);
             pluginConfig[key] = existingConfig[key] ?? propConfig.default;
           });
 
@@ -231,20 +232,32 @@ const PluginConfigurationEditor: React.FC<PluginEditorProps> = ({
           currentConfig
         );
 
-        const pluginConfigObject = { [selectedPlugin.Id]: validatedData };
+        // Parse configuration with error handling
+        let updatedPluginDetails;
+        try {
+          updatedPluginDetails = JSON.parse(selectedMonitor.Configuration);
+        } catch (parseError) {
+          console.error("Failed to parse monitor configuration:", parseError);
+          throw new Error("Invalid JSON configuration format");
+        }
 
-        // Update the monitor's plugin configuration
-        const updatedPluginDetails = selectedMonitor.PluginDetails.map(
-          (plugin) =>
-            plugin.Id === selectedPlugin.Id
-              ? { ...plugin, Configuration: JSON.stringify(pluginConfigObject) }
-              : plugin
-        );
+        // Ensure configuration is an object
+        if (
+          typeof updatedPluginDetails !== "object" ||
+          updatedPluginDetails === null
+        ) {
+          console.warn(
+            "Configuration is not an object, initializing as empty object"
+          );
+          updatedPluginDetails = {};
+        }
+
+        // Update plugin configuration
+        updatedPluginDetails[selectedPlugin.Id] = validatedData;
 
         await updatePluginConfig({
           monitorId: selectedMonitor.SystemMonitorId,
-          pluginId: selectedPlugin.Id,
-          config: updatedPluginDetails,
+          configuration: updatedPluginDetails,
         })
           .unwrap()
           .then(() => {
@@ -337,10 +350,45 @@ const PluginConfigurationEditor: React.FC<PluginEditorProps> = ({
   const currentSaveStatus = saveStatus[selectedPlugin.Id];
 
   // Check if plugin has existing configuration
-  const hasExistingConfig =
-    selectedMonitor?.Configuration &&
-    selectedMonitor.Configuration.trim() !== "" &&
-    selectedMonitor.Configuration !== "{}";
+  function hasExistingPluginConfig(
+    selectedMonitor: { Configuration?: string },
+    selectedPlugin: { Id: string }
+  ): boolean {
+    try {
+      // Validate inputs
+      if (!selectedMonitor?.Configuration || !selectedPlugin?.Id) {
+        return false;
+      }
+
+      // Parse configuration
+      const configObj = JSON.parse(selectedMonitor.Configuration);
+
+      // Get plugin-specific configuration
+      const pluginConfig = configObj[selectedPlugin.Id];
+
+      // Check if configuration exists and has meaningful content
+      if (!pluginConfig) {
+        return false;
+      }
+
+      // Handle different configuration types
+      if (typeof pluginConfig === "string") {
+        return pluginConfig.trim() !== "" && pluginConfig !== "{}";
+      }
+
+      if (typeof pluginConfig === "object") {
+        return Object.keys(pluginConfig).length > 0;
+      }
+
+      // For other types (numbers, booleans), consider them as existing config
+      return true;
+    } catch (jsonError) {
+      console.warn("Invalid JSON in monitor configuration:", jsonError);
+      return false;
+    }
+  }
+
+  const hasExistingConfig = hasExistingPluginConfig(selectedMonitor, selectedPlugin);
 
   const handleCreateConfig = () => {
     if (selectedPlugin && pluginConfig) {
@@ -375,7 +423,6 @@ const PluginConfigurationEditor: React.FC<PluginEditorProps> = ({
   const renderPropertyInput = (
     key: string,
     field: FormField,
-    error?: string | null,
     disabled: boolean = false
   ) => {
     const value = currentPluginConfig[key];
@@ -959,7 +1006,7 @@ const PluginConfigurationEditor: React.FC<PluginEditorProps> = ({
           onCancel={() => {
             setEditPluginDialogOpen(false);
           }}
-          customTrigger={<></>}
+          customTrigger={<span></span>}
         />
       </div>
     </div>

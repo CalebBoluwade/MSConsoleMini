@@ -77,12 +77,12 @@ export const MonitorAPI = createApi({
     // PUT /SystemMonitor/PluginConfigEdit/:id
     updatePluginConfiguration: builder.mutation<
       void,
-      { monitorId: string; pluginId: string; config: object }
+      { monitorId: string; configuration: object }
     >({
-      query: ({ monitorId, pluginId, config }) => ({
+      query: ({ monitorId, configuration }) => ({
         url: `/SystemMonitor/PluginConfigEdit/${monitorId}`,
         method: "PUT",
-        body: { pluginId, configuration: config },
+        body: configuration,
       }),
       invalidatesTags: ["ServiceMonitors"],
     }),

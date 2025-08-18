@@ -400,7 +400,7 @@ export const PLUGIN_CONFIGS: Record<string, PluginConfig> = {
       userAgent: {
         type: "text",
         label: "User Agent",
-        default: "MS.GoMonitor/2.0",
+        default: "MS.Monitor/1.0",
         placeholder: "Custom User Agent",
         tooltip: "Custom User-Agent header value",
       },
