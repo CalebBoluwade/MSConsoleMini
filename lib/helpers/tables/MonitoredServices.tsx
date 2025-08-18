@@ -52,7 +52,7 @@ const MonitorTable = ({
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="max-w-52 truncate flex items-center justify-start text-sm text-muted-foreground">
+        <div className="max-w-60 truncate flex items-center justify-start text-xl font-medium text-muted-foreground">
           {row.original.ServiceName}
         </div>
       ),
@@ -77,7 +77,7 @@ const MonitorTable = ({
     columnHelper.accessor("checkInterval", {
       header: "Monitor Interval",
       cell: ({ row }) => (
-        <div className="flex items-center justify-center text-center text-sm text-muted-foreground">
+        <div className="flex items-center text-left justify-start text-sm text-muted-foreground">
           {getIntervalLabel(row.original.checkInterval)}
         </div>
       ),
@@ -85,7 +85,7 @@ const MonitorTable = ({
     columnHelper.accessor("Device", {
       header: "Device Type",
       cell: ({ row }) => (
-        <div className="flex items-center justify-center text-center text-sm text-muted-foreground">
+        <div className="flex items-center text-left justify-start text-sm text-muted-foreground">
           {row.original.Device}
         </div>
       ),
@@ -121,7 +121,7 @@ const MonitorTable = ({
               onCancel={() => {
                 setMonitoredDialogOpen(false);
               }}
-              customTrigger={<span></span>}
+              customTrigger={<></>}
             />
           </>
         );
@@ -130,7 +130,7 @@ const MonitorTable = ({
     columnHelper.accessor("Plugins", {
       header: "Plugins",
       cell: ({ row }) => (
-        <Badge className="px-2 py-3" variant="outline">
+        <Badge className="p-2 font-bold text-xl" variant="outline">
           {(row.original.Plugins ?? []).length}
         </Badge>
       ),
@@ -158,13 +158,11 @@ const MonitorTable = ({
           {(row.original.Metrics ?? []).length !== 0 ? (
             <>
               <SparkAreaChart
-                data={row.original.Metrics.map((x, i) => ({
-                  timestamp: i,
-                  metric: x,
-                }))}
+                data={row.original.Metrics}
                 categories={["metric"]}
                 index={"timestamp"}
-                colors={["purple", "#ffcc33"]}
+                colors={["purple"]}
+                showGradient={true}
                 className="h-7 w-16 sm:h-12 sm:w-32"
               />
 
@@ -172,7 +170,7 @@ const MonitorTable = ({
                 {(row.original.Metrics ?? []).length > 0
                   ? (
                       row.original.Metrics.reduce(
-                        (sum, value) => sum + value,
+                        (sum, value) => sum + value.metric,
                         0
                       ) / row.original.Metrics.length
                     ).toFixed(2) + " %"

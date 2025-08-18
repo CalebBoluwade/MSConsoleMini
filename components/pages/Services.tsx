@@ -26,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -136,45 +136,31 @@ const ServicesManagement = () => {
 
   return (
     <AnimatePresence>
-      <motion.div className="space-y-5 space-x-2">
-        {/* Header */}
-        <motion.div className="bg-white dark:bg-gray-800 space-y-6 rounded-lg px-6 py-4 shadow-sm border">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Services Manager
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Organize and monitor your entities
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(true)}
-              className="border-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Service Monitor
-            </Button>
-          </div>
-        </motion.div>
-
+      <motion.div className="space-y-7 space-x-1">
         {/* Table */}
-        <Card>
+        <Card className="border-0 py-0 px-1">
+          {/* Header */}
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Monitors</CardTitle>
-              {/* <div className="flex items-center space-x-2">
+            <motion.div className="mt-4 space-y-6 rounded-lg px-6 py-4 shadow-sm border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Monitor Manager
+                  </h1>
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">
+                    Organize and monitor your entities
+                  </p>
+                </div>
                 <Button
                   variant="outline"
-                  onClick={() => setIsDialogOpen(true)}
-                  className="border-green-600 hover:bg-green-700 --text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  onClick={() => setIsEditDialogOpen(true)}
+                  className="border-green-600 hover:bg-green-400 dark:text-white px-4 py-6 rounded-lg font-medium transition-colors flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Service Monitor
                 </Button>
-              </div> */}
-            </div>
+              </div>
+            </motion.div>
           </CardHeader>
           <CardContent>
             <div className="rounded-md border">

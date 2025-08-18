@@ -65,7 +65,7 @@ const DiskDrive = ({ AgentId }: { AgentId: string | null }) => {
                     item.DiskSize) *
                   100
                 }
-                className={`rounded bg-[#4CAF50]`}
+                className={`rounded --bg-[#4CAF50]`}
                 // className={`w-[60%] bg-[#4CAF50] bg-[${
                 //   ((item.DiskSize - item.FreeSpaceUnformatted) /
                 //     item.DiskSize) *
@@ -83,7 +83,7 @@ const DiskDrive = ({ AgentId }: { AgentId: string | null }) => {
                 //     ? "#4CAF50"
                 //     : "#4CAF50"
                 // }]-500`}
-                color="fuchsia"
+
               />
               <Metric
                 color={

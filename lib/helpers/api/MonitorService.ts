@@ -14,7 +14,7 @@ export const MonitorAPI = createApi({
   }),
   tagTypes: ["ServiceMonitors"],
   endpoints: (builder) => ({
-    getAllMonitors: builder.query<BaseMonitor[], void>({
+    getAllMonitors: builder.query<BaseMonitor[], null | void>({
       query: () => "/systemmonitor",
     }),
 
@@ -22,7 +22,7 @@ export const MonitorAPI = createApi({
       query: (id) => `/systemmonitor/${id}`,
     }),
 
-    getMonitorPlugins: builder.query<MonitorPlugin[], void>({
+    getMonitorPlugins: builder.query<MonitorPlugin[], null | void>({
       query: () => "/Plugins",
     }),
 
@@ -73,6 +73,19 @@ export const MonitorAPI = createApi({
       }),
       invalidatesTags: ["ServiceMonitors"],
     }),
+
+    // PUT /SystemMonitor/PluginConfigEdit/:id
+    updatePluginConfiguration: builder.mutation<
+      void,
+      { monitorId: string; pluginId: string; config: object }
+    >({
+      query: ({ monitorId, pluginId, config }) => ({
+        url: `/SystemMonitor/PluginConfigEdit/${monitorId}`,
+        method: "PUT",
+        body: { pluginId, configuration: config },
+      }),
+      invalidatesTags: ["ServiceMonitors"],
+    }),
   }),
 });
 
@@ -85,4 +98,5 @@ export const {
   useCreateServiceMonitorMutation,
   useUpdateServiceMonitorMutation,
   useDeleteServiceMonitorMutation,
+  useUpdatePluginConfigurationMutation,
 } = MonitorAPI;

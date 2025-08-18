@@ -48,7 +48,7 @@ interface BaseMonitor {
     Description: string;
     Color: string;
   };
-  Metrics: number[];
+  Metrics: Record<string, number>[];
   Plugins: string[];
   PluginDetails: MonitorPlugin[];
   checkInterval: string;

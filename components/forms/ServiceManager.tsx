@@ -22,7 +22,6 @@ import {
 import LoadingEventUI from "../LoadingUI";
 import { AlarmClockCheck, Blocks, Check, ToyBrick, Trash } from "lucide-react";
 import { Badge } from "../ui/badge";
-import { PluginSelector } from "./PluginManager";
 import { toast } from "sonner";
 import {
   Select,
@@ -45,6 +44,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../ui/sheet";
+import { PluginSelector } from "./PluginSelector";
 
 interface ServiceManagerFormProps {
   editServiceId?: string;
@@ -66,10 +66,13 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
 
   const { data: monitor, isLoading: isMonitorsLoading } =
     useGetSingleMonitorQuery(editServiceId! ?? "", {
+      refetchOnMountOrArgChange: true,
       skip: !editServiceId,
     });
 
-  const { data: allPlugins, isLoading } = useGetMonitorPluginsQuery();
+  const { data: allPlugins, isLoading } = useGetMonitorPluginsQuery(null, {
+    refetchOnMountOrArgChange: true,
+  });
 
   const [createServiceMonitor] = useCreateServiceMonitorMutation();
   const [updateServiceMonitor] = useUpdateServiceMonitorMutation();
@@ -505,6 +508,7 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
                     <div className="p-4 overflow-y-auto flex-grow">
                       <PluginSelector
                         editId={editServiceId ?? undefined}
+                        createdDeviceType={form.watch("Device") ?? undefined}
                         selectedPluginIds={form.getValues("Plugins") || []}
                         onAddPlugins={handleAddPlugins}
                         onRemovePlugins={handleRemovePlugins}

@@ -240,7 +240,7 @@ const ConsoleBarSearch = ({
           variant="outline"
           disabled={disabled}
           className={cn(
-            "relative h-10 justify-between px-3 text-sm text-muted-foreground sm:pr-12",
+            "relative h-10 justify-between px-3 text-sm text-muted-foreground sm:mr-12",
             className
           )}
         >
@@ -252,12 +252,12 @@ const ConsoleBarSearch = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="--w-full p-0 --sm:w-[40rem]"
+        className="w-full p-0 --sm:w-[40rem]"
         align="start"
         sideOffset={10}
       >
         <Command
-          className="--w-full rounded-lg border shadow-md"
+          className="w-full rounded-lg border shadow-md"
           shouldFilter={false}
           loop
         >

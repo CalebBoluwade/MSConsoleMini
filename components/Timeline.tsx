@@ -20,7 +20,7 @@ interface TimelineProps {
 
 const TimelineConnector = () => (
   <div
-    className="absolute left-5 top-5 -ml-px mt-1 w-0.5 ---translate-x-1/2 h-full --bg-gray-300 bg-primary/20"
+    className="absolute left-5 top-5 -ml-px mt-1 w-0.5 ---translate-x-1/2 h-full bg-gray-300 --bg-primary/20"
     aria-hidden="true"
   />
 );
@@ -61,7 +61,7 @@ export function Timeline({ items, className }: Readonly<TimelineProps>) {
             <TimelineIcon>{PluginTypeIcon(item.pluginType)}</TimelineIcon>
 
             {/* Content */}
-            <div className="ml-4 flex-1 group-hover:translate-x-2 transition-all duration-300">
+            <div className="ml-4 flex-1 group-hover:translate-x-2 transition-all duration-300 max-w-[400px]">
               <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between mb-2">
@@ -80,15 +80,15 @@ export function Timeline({ items, className }: Readonly<TimelineProps>) {
                       </StatusBadge>
                     </div>
                   </div>
-                  <CardTitle className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                  <CardTitle className="text-xl truncate font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                     {item.pluginName}
                   </CardTitle>
-                  <CardDescription className="text-gray-600 ">
+                  <CardDescription className="text-wrap text-gray-600 ">
                     {item.pluginDescription}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 p-3 rounded-lg">
+                  <p className="text-wrap truncate text-sm text-gray-700 leading-relaxed bg-gray-50 p-3 rounded-lg">
                     {item.output}
                   </p>
                 </CardContent>

@@ -6,19 +6,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import moment from "moment";
 import { Timer } from "lucide-react";
 import { useState } from "react";
 
 export default function SelectDateTimeRange() {
   const [timeRange, setTimeRange] = useState("30m");
-
-  const searchParams = useSearchParams();
   const router = useRouter();
-
-  const paramsObject = Object.fromEntries(searchParams.entries());
-  console.log(paramsObject);
 
   const setTimeTravel = (selectedDateTime: string) => {
     let daysToSubtract: number = moment().subtract(30, "minutes").unix();
@@ -48,18 +43,13 @@ export default function SelectDateTimeRange() {
   };
 
   return (
-    //   <DateRangePicker
-    //   className="my-3"
-    //   placeholder="Select Time Period Range"
-    //   onValueChange={(v) => console.log(v)}
-    // />
     <Select
       value={timeRange}
       onValueChange={(selectedDateTime: string) => setTimeTravel(selectedDateTime)}
       // className="rounded-lg sm:ml-auto"
     >
       <SelectTrigger
-        className="w-[165px] text-sm"
+        className="max-w-[160px] text-sm"
         aria-placeholder="Select a Value"
         aria-label="Select a Value"
       >
@@ -69,10 +59,10 @@ export default function SelectDateTimeRange() {
 
       <SelectContent className="rounded-xl">
         <SelectGroup>
-          <SelectItem className="rounded-lg text-md font-semibold" value="30m">
-            Last 30 Minutes
+          <SelectItem className="rounded-lg text-base font-semibold" value="30m">
+            Last 30 Mins
           </SelectItem>
-          <SelectItem className="rounded-lg text-md font-semibold" value="1h">
+          <SelectItem className="rounded-lg text-base font-semibold" value="1h">
             Last 1 Hour
           </SelectItem>
           <SelectItem className="rounded-lg text-md font-semibold" value="2h">

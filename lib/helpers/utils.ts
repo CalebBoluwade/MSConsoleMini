@@ -31,7 +31,7 @@ export const GenerateMockDevices = (count: number): BaseMonitor[] => {
     Configuration: "{}",
     vendor: "Cisco",
     Description: "ghfdbsdasdfghfdsadfdgf",
-    // LiveCheckFlag: 0,
+    CreatedAt: new Date().toISOString(),
     machineType: "",
     responseTime: Math.floor(Math.random() * 100),
     packetLoss: Math.floor(Math.random() * 10),
@@ -90,6 +90,11 @@ export const formatDate = (dateString: string) => {
     day: "numeric",
   });
 };
+
+export const sanitizeContent = (content: string): string => {
+  return content.replace(/[<>]/g, '');
+};
+
 
 export const intervalOptions = [
   { label: "Every 30 seconds", cron: "*/30 * * * * *" },

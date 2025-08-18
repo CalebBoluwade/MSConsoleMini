@@ -10,6 +10,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { Card, CardDescription } from "@/components/ui/card";
 import { HexStatusColor, StatusIcon } from "@/lib/hooks/useStatusHooks";
+import { cn } from "@/lib/utils";
 
 interface AddedProps<T> extends InputHTMLAttributes<HTMLDivElement> {
   icon?: React.JSX.Element;
@@ -55,7 +56,7 @@ const HexagonGridView = <T extends BaseMonitor>({
   };
 
   return (
-    <Card className="relative py-3 h-[calc(100dvh-165px)]">
+    <Card className={cn("relative h-[calc(100dvh-135px)]", props.className)}>
       <AnimatePresence>
         {props.data.length ? (
           <div className="rounded-lg relative hexGrid grid grid-cols-12 gap-1 md:grid-cols-18 lg:grid-cols-24 --mr-4">
@@ -136,7 +137,7 @@ const HexagonGridView = <T extends BaseMonitor>({
 
                       <p className="text-sm font-mono">
                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {(device.Metadata.LastCheckTime as any).Time ?? (device as any).LastCheckTime}
+                        {/* {(device.Metadata.LastCheckTime as any).Time ?? (device as any).LastCheckTime} */}
                       </p>
                     </div>
                   </TooltipContent>

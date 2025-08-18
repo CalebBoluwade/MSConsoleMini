@@ -46,6 +46,14 @@ export const SITE_MAP: PageMap = {
     },
     path: "/settings",
   },
+  DOCUMENTATION: {
+    metadata: {
+      title: "Documentation | MS APM",
+      description: "Learn how to use the MS Console Mini application effectively.",
+    },
+    path: "/docs",
+    header: "Documentation"
+  },
   // Add more pages as needed
 };
 

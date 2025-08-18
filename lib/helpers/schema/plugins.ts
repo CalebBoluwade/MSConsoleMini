@@ -1,5 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { z } from "zod";
-import { HttpMethodsValues, PluginTypes } from "../constants";
+import {
+  HttpMethodsValues,
+  PluginTypes,
+} from "../constants";
+import { Globe, LucideIcon } from "lucide-react";
 
 // Base schema for all plugins
 export const basePluginSchema = z.object({
@@ -10,20 +15,30 @@ export const basePluginSchema = z.object({
 
 // Zod schemas for each plugin type
 const HttpMonitorSchema = basePluginSchema.extend({
-  url: z.string().url("Must be a valid URL").min(1, "URL is required"),
+  method: z.enum(HttpMethodsValues),
+  // url: z.string().url("Must be a valid URL").min(1, "URL is required"),
+  endpoint_path: z.string().optional(),
   useSSL: z.boolean(),
-  timeout: z
-    .number()
-    .min(1, "Timeout must be at least 1 second")
-    .max(300, "Timeout cannot exceed 300 seconds"),
-  followRedirects: z.boolean(),
-  userAgent: z
-    .string()
-    .min(1, "User Agent is required")
-    .max(200, "User Agent too long"),
-  Method: z.enum(HttpMethodsValues),
-  ContentType: z.string().optional(),
-  postData: z.object({}),
+  timeout: z.number().min(1).max(300),
+  connect_timeout: z.number().min(1).max(60),
+  insecure_skip_verify: z.boolean(),
+  auth_type: z.enum(["none", "bearer", "basic", "api_key"]),
+  auth_token: z.string().optional(),
+  basic_username: z.string().optional(),
+  basic_password: z.string().optional(),
+  api_key_header: z.string().optional(),
+  api_key_value: z.string().optional(),
+  expected_status_codes: z.array(z.number()),
+  follow_redirects: z.boolean(),
+  max_redirects: z.number().min(0).max(20),
+  response_contains: z.string().optional(),
+  userAgent: z.string(),
+  post_data: z.string().optional(),
+  custom_headers: z.array(z.object({
+    key: z.string(),
+    value: z.string()
+  })).optional(),
+  content_type: z.string().optional()
 });
 
 const AgentMonitorSchema = basePluginSchema.extend({
@@ -120,67 +135,310 @@ const ServiceMonitorSchema = basePluginSchema.extend({
 });
 
 export type PluginGenericProps = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  
   [key: string]: any; // or a more specific type like string | number | boolean | ...
 };
 
-export type PluginInputProps = {
-  type: string;
-  label: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  default: any;
-  // default: string | number | boolean | unknown;
-
-  min?: number;
-  max?: number;
-  options?: Array<string>;
-  [x: string]: unknown;
-};
-
-export interface PluginConfig {
-  name: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  schema: z.ZodSchema<any, any, any>;
-  properties: Record<string, PluginInputProps>;
+// Enhanced Plugin Configuration Types
+export interface FieldDependency {
+  field: string;
+  
+  value: any | any[];
 }
 
+export type ValidationRule = {
+  type: string;
+  label: string;
+  pattern?: RegExp;
+  message?: string;
+  default: any;
+  min?: number;
+  max?: number;
+  options?: Array<string | FieldOption>;
+  required?: boolean;
+};
+
+export interface FieldOption {
+  
+  value: any;
+  label: string;
+  disabled?: boolean;
+  group?: string;
+}
+
+export interface BaseField {
+  type: string;
+  label: string;
+  tooltip?: string;
+  default?: any;
+  required?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  dependsOn?: string | FieldDependency;
+  warning?: string;
+  rows?: number;  // Add rows for textarea
+  maxLength?: number;  // Add maxLength for textarea/text
+  unit?: string;  // Add unit for number fields
+  step?: number;  // Add step for number fields
+}
+
+export interface SelectField extends BaseField {
+  type: "select";
+  options: (string | FieldOption)[];
+  multiple?: boolean;
+}
+
+export interface MultiSelectField extends BaseField {
+  type: "multi-select";
+  options: FieldOption[];
+}
+
+export interface NumberField extends BaseField {
+  type: "number";
+  min?: number;
+  max?: number;
+  step?: number;
+  unit?: string;
+}
+
+export interface TextField extends BaseField {
+  type: "text" | "email" | "url" | "password";
+}
+
+export interface TextareaField extends BaseField {
+  type: "textarea";
+  rows?: number;
+  maxLength?: number;
+}
+
+export interface BooleanField extends BaseField {
+  type: "boolean";
+}
+
+export interface KeyValueField extends BaseField {
+  type: "key-value";
+  keyPlaceholder?: string;
+  valuePlaceholder?: string;
+  allowDuplicateKeys?: boolean;
+}
+
+export type FormField =
+  | SelectField
+  | MultiSelectField
+  | NumberField
+  | TextField
+  | TextareaField
+  | BooleanField
+  | KeyValueField;
+
+export interface PluginConfig {
+  title: string;
+  description?: string;
+  icon?: LucideIcon;
+  fields: Record<string, FormField>;
+  collapsible?: boolean;
+  schema: z.ZodSchema<any>;
+}
 // Plugin configurations with Zod schemas
 export const PLUGIN_CONFIGS: Record<string, PluginConfig> = {
   [PluginTypes.HTTPMonitor]: {
-    name: "HTTP Monitor",
+    title: "HTTP Monitor",
+    icon: Globe,
     schema: HttpMonitorSchema,
-    properties: {
+    fields: {
+      // Basic Configuration
       method: {
         type: "select",
         label: "HTTP Method",
         default: "GET",
-        options: HttpMethodsValues,
+        options: HttpMethodsValues.map((method) => ({
+          value: method,
+          label: method,
+        })),
+        tooltip: "HTTP method to use for the request",
+        required: true,
       },
-      url: {
-        type: "text",
-        label: "Target URL",
-        default: "https://example.com",
-      },
+      // url: {
+      //   type: "url",
+      //   label: "Target URL",
+      //   default: "https://example.com",
+      //   placeholder: "https://api.example.com/health",
+      //   tooltip: "Full URL to monitor including protocol",
+      //   required: true,
 
-      useSSL: { type: "boolean", label: "Use SSL (HTTPS)", default: true },
+      // },
+      endpoint_path: {
+        type: "text",
+        label: "Endpoint Path",
+        default: "/health",
+        placeholder: "/health",
+        tooltip:
+          "Path to append to the base URL (optional if full URL is provided above)",
+      },
+      useSSL: {
+        type: "boolean",
+        label: "Force HTTPS",
+        default: true,
+        tooltip: "Force the use of HTTPS regardless of URL protocol",
+      },
       timeout: {
         type: "number",
-        label: "Timeout (seconds)",
+        label: "Request Timeout",
         default: 30,
         min: 1,
         max: 300,
+        unit: "seconds",
+        tooltip: "Maximum time to wait for a response",
       },
+      connect_timeout: {
+        type: "number",
+        label: "Connection Timeout",
+        default: 10,
+        min: 1,
+        max: 60,
+        unit: "seconds",
+        tooltip: "Maximum time to wait for connection establishment",
+      },
+
+      // Security
+      insecure_skip_verify: {
+        type: "boolean",
+        label: "Skip SSL Verification",
+        default: false,
+        tooltip: "Skip SSL certificate verification",
+        warning:
+          "This option reduces security and should only be used for testing",
+      },
+      auth_type: {
+        type: "select",
+        label: "Authentication Type",
+        default: "none",
+        options: [
+          { value: "none", label: "No Authentication" },
+          { value: "bearer", label: "Bearer Token" },
+          { value: "basic", label: "Basic Auth" },
+          { value: "api_key", label: "API Key" },
+        ],
+        tooltip: "Type of authentication to use",
+      },
+      auth_token: {
+        type: "password",
+        label: "Bearer Token",
+        placeholder: "your-bearer-token",
+        tooltip: "Bearer token for authorization header",
+        dependsOn: { field: "auth_type", value: "bearer" },
+      },
+      basic_username: {
+        type: "text",
+        label: "Username",
+        placeholder: "username",
+        tooltip: "Basic auth username",
+        dependsOn: { field: "auth_type", value: "basic" },
+      },
+      basic_password: {
+        type: "password",
+        label: "Password",
+        placeholder: "password",
+        tooltip: "Basic auth password",
+        dependsOn: { field: "auth_type", value: "basic" },
+      },
+      api_key_header: {
+        type: "text",
+        label: "API Key Header",
+        default: "X-API-Key",
+        placeholder: "X-API-Key",
+        tooltip: "Header name for API key",
+        dependsOn: { field: "auth_type", value: "api_key" },
+      },
+      api_key_value: {
+        type: "password",
+        label: "API Key Value",
+        placeholder: "your-api-key",
+        tooltip: "API key value",
+        dependsOn: { field: "auth_type", value: "api_key" },
+      },
+
+      // Validation
+      expected_status_codes: {
+        type: "multi-select",
+        label: "Expected Status Codes",
+        default: [200],
+        options: [
+          { value: 200, label: "200 - OK" },
+          { value: 201, label: "201 - Created" },
+          { value: 202, label: "202 - Accepted" },
+          { value: 204, label: "204 - No Content" },
+          { value: 301, label: "301 - Moved Permanently" },
+          { value: 302, label: "302 - Found" },
+          { value: 304, label: "304 - Not Modified" },
+        ],
+        tooltip: "HTTP status codes that indicate a healthy response",
+      },
+      follow_redirects: {
+        type: "boolean",
+        label: "Follow Redirects",
+        default: true,
+        tooltip: "Automatically follow HTTP redirects",
+      },
+      max_redirects: {
+        type: "number",
+        label: "Max Redirects",
+        default: 5,
+        min: 0,
+        max: 20,
+        tooltip: "Maximum number of redirects to follow",
+        dependsOn: "follow_redirects",
+      },
+      response_contains: {
+        type: "text",
+        label: "Response Must Contain",
+        placeholder: "success",
+        tooltip: "Text that must be present in the response body (optional)",
+      },
+
+      // Advanced
       userAgent: {
         type: "text",
         label: "User Agent",
-        default: "System Monitor Bot",
+        default: "MS.GoMonitor/2.0",
+        placeholder: "Custom User Agent",
+        tooltip: "Custom User-Agent header value",
       },
+      post_data: {
+        type: "textarea",
+        label: "Request Body",
+        placeholder: '{"key": "value"}',
+        tooltip: "Request body for POST/PUT requests (JSON format recommended)",
+        dependsOn: { field: "method", value: ["POST", "PUT", "PATCH"] },
+      },
+      custom_headers: {
+        type: "key-value",
+        label: "Custom Headers",
+        tooltip: "Additional HTTP headers to send with the request",
+        default: [],
+      },
+      content_type: {
+        type: "select",
+        label: "Content Type",
+        default: "application/json",
+        options: [
+          "application/json",
+          "application/xml",
+          "text/plain",
+          "application/x-www-form-urlencoded",
+          "multipart/form-data",
+        ],
+        tooltip: "Content-Type header for request body",
+        dependsOn: { field: "method", value: ["POST", "PUT", "PATCH"] },
+      },
+
+
     },
   },
   [PluginTypes.SSLMonitor]: {
-    name: "SSL Monitor",
+    title: "SSL Monitor",
     schema: SSLMonitorSchema,
-    properties: {
+    fields: {
       daysBeforeExpiry: {
         type: "number",
         label: "Days Before Expiry",
@@ -188,12 +446,20 @@ export const PLUGIN_CONFIGS: Record<string, PluginConfig> = {
         min: 1,
         max: 30,
       },
+      port: {
+        type: "number",
+        label: "Port",
+        default: 443,
+        min: 1,
+        max: 65535,
+        tooltip: "SSL port to connect to",
+      },
     },
   },
   [PluginTypes.DatabaseMonitor]: {
-    name: "Database Monitor",
+    title: "Database Monitor",
     schema: DatabaseMonitorSchema,
-    properties: {
+    fields: {
       connectionString: {
         type: "text",
         label: "Connection String",
@@ -232,9 +498,9 @@ export const PLUGIN_CONFIGS: Record<string, PluginConfig> = {
     },
   },
   "file-monitor": {
-    name: "File System Monitor",
+    title: "File System Monitor",
     schema: FileMonitorSchema,
-    properties: {
+    fields: {
       watchPath: { type: "text", label: "Watch Path", default: "/var/log" },
       recursive: {
         type: "boolean",
@@ -266,9 +532,9 @@ export const PLUGIN_CONFIGS: Record<string, PluginConfig> = {
     },
   },
   "service-monitor": {
-    name: "Service Monitor",
+    title: "Service Monitor",
     schema: ServiceMonitorSchema,
-    properties: {
+    fields: {
       serviceName: { type: "text", label: "Service Name", default: "" },
       checkMethod: {
         type: "select",
@@ -305,9 +571,9 @@ export const PLUGIN_CONFIGS: Record<string, PluginConfig> = {
     },
   },
   [PluginTypes.AgentMonitor]: {
-    name: "Agent Health",
+    title: "Agent Health",
     schema: AgentMonitorSchema,
-    properties: {
+    fields: {
       cpu: {
         type: "boolean",
         label: "Enable CPU Monitoring",
@@ -344,6 +610,32 @@ export const PLUGIN_CONFIGS: Record<string, PluginConfig> = {
         min: 0,
         max: 50,
       },
+    },
+  },
+  [PluginTypes.NetworkMonitor]: {
+    title: "Network Monitor",
+    schema: basePluginSchema,
+    fields: {
+      // Add properties specific to Network Monitor
+      snmpVersion: {
+        type: "select",
+        label: "SNMP Version",
+        default: "v2c",
+        options: ["v1", "v2c", "v3"],
+      },
+      communityString: {
+        type: "text",
+        label: "Community String",
+        default: "public",
+      },
+      timeout: {
+        type: "number",
+        label: "Timeout (ms)",
+        default: 1000,
+        min: 100,
+        max: 5000,
+      },
+      retries: { type: "number", label: "Retries", default: 3, min: 1, max: 5 },
     },
   },
 };

@@ -1,11 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
-import { AreaChart, CustomTooltipProps } from "@tremor/react";
-import { ChartConfig, ChartContainer } from "@/components/ui/chart";
+import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 import { Card, CardContent } from "@/components/ui/card";
 import LoadingEventUI from "./LoadingUI";
 import { useSystemDataQuery } from "@/lib/helpers/api/RemoteService";
+import { useLookupTime } from "@/lib/hooks/useLookupTime";
 
 const SystemChart = ({
   AgentId = "A001",
@@ -16,6 +23,8 @@ const SystemChart = ({
   // onClickMore: () => void;
 }) => {
   const [currentTs] = useState(Date.now());
+  const { lookupTime } = useLookupTime();
+
   const chartConfig = {
     system: {
       label: "System Metrics",
@@ -38,16 +47,15 @@ const SystemChart = ({
     {
       AgentId,
       Entity,
-      startPeriod: 1708818569124,
+      startPeriod: lookupTime ?? 0,
       endPeriod: currentTs,
     },
     {
       pollingInterval: 5 * 60 * 1000,
       refetchOnMountOrArgChange: true,
+      refetchOnFocus: true
     }
   );
-
-  const dataFormatter = (value: number) => `${value}%`;
 
   let content;
 
@@ -59,31 +67,6 @@ const SystemChart = ({
     );
   }
 
-  const customTooltip = (props: CustomTooltipProps) => {
-    const { payload, active } = props;
-    if (!active || !payload) return null;
-
-    return (
-      <div className="w-56 rounded-tremor-default border border-tremor-border bg-tremor-background p-2 text-tremor-default shadow-tremor-dropdown">
-        {payload.map((category, idx: number) => (
-          <div key={idx + 1} className="flex flex-1 space-x-2.5">
-            <div
-              className={`flex w-1 flex-col bg-${category.color}-500 rounded`}
-            />
-            <div className="space-y-1">
-              <p className="text-tremor-content">
-                {String(category.dataKey).includes("cpu") ? "CPU" : "Memory"}
-              </p>
-              <p className="font-medium text-tremor-content-emphasis">
-                {category.value}%
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   if ((sysinfo ?? []).length > 0) {
     content = (
       <Card className="my-4">
@@ -92,27 +75,105 @@ const SystemChart = ({
             config={chartConfig}
             className="aspect-auto h-[250px] w-full"
           >
-            <AreaChart
-              className="w-full h-96"
+            <AreaChart data={sysinfo! ?? []}>
+              <defs>
+                <linearGradient id="fillDesktop" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor="var(--color-desktop)"
+                    stopOpacity={0.8}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--color-desktop)"
+                    stopOpacity={0.1}
+                  />
+                </linearGradient>
+                <linearGradient id="fillMobile" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor="var(--color-mobile)"
+                    stopOpacity={0.8}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--color-mobile)"
+                    stopOpacity={0.1}
+                  />
+                </linearGradient>
+              </defs>
+
+              <CartesianGrid
+                vertical={false}
+                // strokeDasharray="3 3"
+              />
+
+              <XAxis
+                dataKey="timestamp"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={32}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return date.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  });
+                }}
+              />
+
+              <ChartTooltipContent
+                labelFormatter={(value) => {
+                  return new Date(value).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  });
+                }}
+                indicator="dot"
+              />
+
+              <Area
+                dataKey="cpuUsage"
+                type="natural"
+                fill="url(#fillMobile)"
+                stroke="var(--color-mobile)"
+                stackId="a"
+              />
+
+              <Area
+                dataKey="desktop"
+                type="natural"
+                fill="url(#fillDesktop)"
+                stroke="var(--color-desktop)"
+                stackId="a"
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+            </AreaChart>
+
+            {/* <AreaChart
+              className="w-full h-[420px]"
               data={(sysinfo! ?? [])}
               // index={["timestamp"]}
               index="timestamp"
               categories={["cpuUsage", "memoryUsage"]}
-              colors={["indigo", "lime"]}
+              colors={["purple", "green"]}
               // type="stacked"
               valueFormatter={dataFormatter}
               maxValue={100}
               // showYAxis={false}
-              showLegend={false}
+              showLegend={true}
+              showGradient={true}
               enableLegendSlider
               startEndOnly={true}
               yAxisWidth={35}
+              showAnimation={true}
               xAxisLabel="Time Period"
               yAxisLabel="Percentage Usage"
               onValueChange={(v) => console.log(v)}
               customTooltip={customTooltip}
               connectNulls={false}
-            />
+            /> */}
           </ChartContainer>
         </CardContent>
 

@@ -22,7 +22,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PluginEditor } from "../forms/PluginManager";
 import {
   useGetMonitoringResultsByIdQuery,
   useGetSingleMonitorQuery,
@@ -47,11 +46,12 @@ import {
   StatusIcon,
   useGroupedMonitorResults,
 } from "@/lib/hooks/useStatusHooks";
-import { formatDateTime } from "@/lib/helpers/utils";
+import { formatDateTime, getIntervalLabel } from "@/lib/helpers/utils";
 import { Timeline } from "../Timeline";
 import SystemChart from "../CPUChart";
 import DiskDrive from "../DiskDrive";
 import DeployNewAgent from "../forms/NewAgent";
+import PluginConfigurationEditor from "../forms/PluginConfigurationEditor";
 
 const ServiceDetails: React.FC = () => {
   const { SystemMonitorId } = useParams();
@@ -68,6 +68,7 @@ const ServiceDetails: React.FC = () => {
     isLoading: isMonitorLoading,
     refetch,
   } = useGetSingleMonitorQuery(SystemMonitorId!.toString() ?? "", {
+    refetchOnMountOrArgChange: true,
     skip: !SystemMonitorId!.toString(),
   });
 
@@ -77,6 +78,7 @@ const ServiceDetails: React.FC = () => {
     error,
     refetch: refetchResults,
   } = useGetMonitoringResultsByIdQuery(SystemMonitorId!.toString() ?? "", {
+    refetchOnMountOrArgChange: true,
     skip: !SystemMonitorId,
   });
 
@@ -99,7 +101,6 @@ const ServiceDetails: React.FC = () => {
           router.push("/console/monitors");
           return;
         }
-  
       } catch (error) {
         console.error("Error loading data:", error);
       }
@@ -160,8 +161,8 @@ const ServiceDetails: React.FC = () => {
         <div className="grid grid-cols-2 max-md:grid-cols-1 grid-flow-col items-center gap-6">
           <Card className="py-2 min-w-[225px]">
             <CardHeader>
-              <CardTitle className="flex justify-between items-center gap-4 text-3xl font-bold --text-gray-900">
-                Service Details
+              <CardTitle className="flex justify-between items-center gap-4 text-xl font-bold --text-gray-900">
+                Monitor ({selectedMonitor?.IPAddress + ":" + selectedMonitor?.Port})
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -227,7 +228,9 @@ const ServiceDetails: React.FC = () => {
                 <div className="text-sm text-right text-gray-500 flex items-center gap-1">
                   <Clock className="h-4 w-4" />
                   Last updated:{" "}
-                  {new Date(selectedMonitor.Metadata.LastCheckTime!).toLocaleTimeString()}
+                  {new Date(
+                    selectedMonitor.Metadata.LastCheckTime!
+                  ).toLocaleTimeString()}
                 </div>
               ) : (
                 <div className="text-sm text-right text-gray-500 flex items-center gap-1">
@@ -245,15 +248,16 @@ const ServiceDetails: React.FC = () => {
                 Service Device: {selectedMonitor?.Device}
               </CardDescription>
               <CardDescription>
-                IPAddress: {selectedMonitor?.IPAddress}
+                Monitored:{" "}
+                {getIntervalLabel(selectedMonitor?.checkInterval)}
               </CardDescription>
               <CardDescription>
-                Created: {selectedMonitor?.CreatedAt}
+                Created: {new Date(selectedMonitor?.CreatedAt).toLocaleString()}
               </CardDescription>
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 h-full --col-span-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 h-full max-h-[500px] gap-6">
             {/* <Card className="py-2 border-l-4 border-l-green-500">
               <CardHeader className="pb-3">
                 <CardTitle className="text-xl font-medium text-gray-600">
@@ -334,10 +338,10 @@ const ServiceDetails: React.FC = () => {
                     new Date(b.checkedAt).getTime() -
                     new Date(a.checkedAt).getTime()
                 )
-                .slice(0, 7)
+                .slice(0, 10)
                 .map((monitor, index) => (
                   <Card className="py-1" key={`${monitor.id}-${index}`}>
-                    <div className="flex items-center justify-between py-4 px-3 dark:bg-black-700/75 rounded-lg">
+                    <div className="flex items-center justify-between max-md:flex-col gap-2 py-4 px-3 dark:bg-black-700/75 rounded-lg">
                       <div className="flex items-center gap-3">
                         {StatusIcon(monitor.status)}
 
@@ -383,7 +387,7 @@ const ServiceDetails: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <PluginEditor selectedMonitor={selectedMonitor} />
+            <PluginConfigurationEditor selectedMonitor={selectedMonitor} />
           </motion.div>
         </AnimatePresence>
       </section>
@@ -401,14 +405,10 @@ const ServiceDetails: React.FC = () => {
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           {selectedMonitorResult && (
             <DialogContent className="max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle></DialogTitle>
-              </DialogHeader>
-
-              <div className="space-y-6">
+              <div className="space-y-6 mt-2 relative">
                 {/* System Overview */}
                 <Card className="py-2">
-                  <CardHeader className="pt-2 flex justify-between items-center">
+                  <CardHeader className="px-2 flex justify-between items-center">
                     <CardTitle className="text-base flex items-center gap-2">
                       {StatusIcon(selectedMonitorResult.status)}
                       Plugin Results Overview

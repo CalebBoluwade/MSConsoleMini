@@ -5,7 +5,11 @@ import {
   Bolt,
   CalendarX,
   CheckCircle,
+  EarthLock,
+  HeartPulse,
+  MonitorDot,
   MonitorX,
+  ToyBrick,
 } from "lucide-react";
 import { cn } from "../utils";
 import { Badge } from "@/components/ui/badge";
@@ -31,20 +35,14 @@ export const StatusIcon = (status: string) => {
 
 export const PluginTypeIcon = (type: string) => {
   switch ((type ?? "").toLowerCase()) {
-    case "healthy":
-      return <CheckCircle className="min-h-5 min-w-5 text-[#10B981]" />;
-    case "escalation":
-      return <AlertCircle className="min-h-5 min-w-5 text-[#f59e0b]" />;
-    case "acknowledged":
-      return <BellOffIcon className="min-h-5 min-w-5 text-[#3b82f6]" />;
-    case "degraded":
-      return <MonitorX className="min-h-5 min-w-5 text-[#ef4444]" />;
-    case "invalidconfiguration":
-      return <Bolt className="min-h-5 min-w-5 text-[#6b7280]" />;
-    case "scheduled":
-      return <CalendarX className="min-h-5 min-w-5 text-[#8b5cf6]" />;
+    case "healthcheck":
+      return <HeartPulse className="min-h-5 min-w-5 text-[#10B981]" />;
+    case "security":
+      return <EarthLock className="min-h-5 min-w-5 text-[#f59e0b]" />;
+    case "agent":
+      return <MonitorDot className="min-h-5 min-w-5 text-[#3b82f6]" />;
     default:
-      return <Activity className="min-h-5 min-w-5 text-[#6b7280]" />;
+      return <ToyBrick className="min-h-5 min-w-5 text-[#6b7280]" />;
   }
 };
 

@@ -83,7 +83,7 @@ export class DeviceWebSocketService {
     };
 
     this.socket.onerror = (err) => {
-      console.error("WebSocket error:", err);
+      console.warn("WebSocket error:", err);
     };
   }
 
@@ -92,13 +92,17 @@ export class DeviceWebSocketService {
     return this._isConnected;
   }
 
+  public get connectionAttempts() {
+    return this.reconnectAttempts;
+  }
+
   public handleReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       console.log(`Reconnect attempt ${this.reconnectAttempts}`);
       setTimeout(() => this.connect(), this.reconnectDelay);
     } else {
-      console.error("Max reconnect attempts reached.");
+      console.warn("Max reconnect attempts reached.");
     }
   }
 

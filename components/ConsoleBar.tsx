@@ -1,21 +1,22 @@
 "use client";
 
-import React, { useLayoutEffect, useState } from "react";
-import { Orbitron } from "next/font/google";
+import React, { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import {
   Bell,
   BellRing,
   Blocks,
   Cog,
-  Group,
+  UsersRound,
   LayoutDashboard,
   LogOut,
-  Navigation,
+  Navigation as NavigationIcon,
   ServerCrash,
   Settings,
-  SquaresIntersect,
+  Combine,
+  WifiOff,
 } from "lucide-react";
+import { webSocketService } from "@/lib/helpers/service/websocket.service";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import SelectDateTimeRange from "./SelectDayTime";
@@ -40,77 +41,93 @@ import { Dialog, DialogTitle, DialogContent, DialogTrigger } from "./ui/dialog";
 import { getCurrentPageHeader } from "@/lib/config/site-map";
 import Link from "next/link";
 import { useGetAllMonitorsQuery } from "@/lib/helpers/api/MonitorService";
+import useTimer from "@/lib/hooks/useTimer";
+import { sanitizeContent } from "@/lib/helpers/utils";
+import { toast } from "sonner";
 
-const orbitron = Orbitron({ subsets: ["latin"] });
+// const orbitron = Orbitron({ subsets: ["latin"] });
 const ConsoleBar = () => {
   const pathname = usePathname();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isConnected, setIsConnected] = useState(webSocketService.isConnected);
+  const timer = useTimer();
+
+  const [connectionAttempts] = useState(
+    webSocketService.connectionAttempts
+  );
 
   const { data: monitors, isLoading: isMonitorsLoading } =
-    useGetAllMonitorsQuery();
+    useGetAllMonitorsQuery(null, {
+      refetchOnMountOrArgChange: true,
+    });
 
-  const [serviceMonitors] = useState<BaseMonitor[]>(monitors ?? []);
+  const handleConnectionChange = useCallback(
+    (connected: boolean) => {
+      setIsConnected(connected);
+      if (!connected && connectionAttempts > 4) {
+        toast("Dashboard is disconnected. Attempting to reconnect...", {
+          action: {
+            label: "Reconnect Now",
+            onClick: () => webSocketService.handleReconnect(),
+          },
+          dismissible: false,
+          icon: <WifiOff color="red" />,
+          duration: 315000,
+        });
+      }
+    },
+    [connectionAttempts]
+  );
 
-  function addZero(i: number) {
-    let y;
-    if (i < 10) {
-      y = "0" + i;
-    } else {
-      return i;
-    }
-    return y;
-  }
+  useEffect(() => {
+    const connectionInterval = setInterval(() => {
+      setIsConnected(webSocketService.isConnected);
+    }, 2000); // Check every 2 seconds instead of 1
 
-  useLayoutEffect(() => {
-    const x = document.getElementById("timer")!;
+    // const unsubscribeConnection = webSocketService.subscribe(
+    //   "connectionChange",
+    //   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    //   (data: any) => {
+    //     setIsConnected(data.connected);
+    //   }
+    // );
 
-    const timer = setInterval(() => {
-      const d = new Date();
-      const h = d.getHours();
-      const m = d.getMinutes();
-      const s = d.getSeconds();
+    return () => {
+      clearInterval(connectionInterval);
+    };
+  }, [handleConnectionChange]);
 
-      x.innerText = `${addZero(h)}:${addZero(m)}:${addZero(s)}`;
-    }, 1005);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  // Logger.info(navigator.onLine);
-  // absolute right-5 left-[5.9rem]
+  const unreadCount = 0;
 
   return (
-    <header className="fixed top-0 right-0 left-0 flex flex-row items-center px-5 py-1 justify-between gap-2 transition-all shadow-md dark:bg-dark-tremor-brand-faint/35 backdrop-blur-sm bg-opacity-70">
-      <div className="items-center flex gap-3 font-bold w-full">
-        <p className="text-md capitalize">{getCurrentPageHeader(pathname)}</p>
-        <ConsoleBarSearch
-          isLoading={isMonitorsLoading}
-          className="w-full"
-          placeholder="Console Search"
-          devices={serviceMonitors}
-          // groups={async () => await db.getAllGroups()}
-        />
+    <header className="fixed top-0 right-0 left-0 z-50 flex flex-col md:flex-row items-center px-2 md:px-3 pl-1 py-1 justify-between gap-2 transition-all shadow-md dark:bg-dark-tremor-brand-faint/35 backdrop-blur-sm bg-opacity-70">
+      <div className="items-center flex flex-col md:flex-row gap-2 md:gap-3 font-bold w-full md:max-w-[50%]">
+        <p className="text-sm md:text-md capitalize whitespace-nowrap">
+          {sanitizeContent(getCurrentPageHeader(pathname))}
+        </p>
+        <div className="w-full max-w-full">
+          <ConsoleBarSearch
+            isLoading={isMonitorsLoading}
+            className="w-full min-w-0"
+            placeholder="Console Search"
+            devices={monitors ?? []}
+            // groups={async () => await db.getAllGroups()}
+          />
+        </div>
       </div>
 
-      <div className="flex flex-row items-center gap-3">
-        <div className="w-28 font-extrabold text-lg tracking-wider text-right">
-          <time
-            dateTime="df"
-            id="timer"
-            className={`font-bold ${orbitron.className}`}
-          ></time>
+      <div className="--w-full flex flex-row justify-evenly items-center gap-2 md:gap-3 overflow-x-auto pb-2 md:pb-0">
+        <div className="hidden sm:block mx-2 pl-2 font-extrabold text-lg tracking-wider text-right">
+          {timer}
         </div>
 
         <SelectDateTimeRange />
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              // onClick={() => setIsDialogOpen(true)}
-            >
-              <Navigation size={24} strokeWidth={1.5} /> Navigator
+            <Button variant="outline" size="sm" className="whitespace-nowrap">
+              <NavigationIcon size={20} strokeWidth={1.5} className="md:mr-2" />
+              <span className="hidden md:inline">Navigator</span>
             </Button>
           </DialogTrigger>
           <DialogContent
@@ -119,8 +136,7 @@ const ConsoleBar = () => {
             className="grid grid-cols-2 flex-wrap"
           >
             <DialogTitle className="mr-4 mb-3 pt-3 text-center flex items-center justify-center gap-2">
-              <Navigation size={24} strokeWidth={1.5} />
-              Navigator
+              <NavigationIcon size={24} strokeWidth={1.5} /> Navigator
             </DialogTitle>
             <Link
               href={"/"}
@@ -135,7 +151,7 @@ const ConsoleBar = () => {
               onClick={() => setIsDialogOpen(false)}
               className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
             >
-              <Group size={28} className="mr-2" />
+              <UsersRound size={28} className="mr-2" />
               <span>Monitor Groups</span>
             </Link>
             <Link
@@ -159,7 +175,7 @@ const ConsoleBar = () => {
               onClick={() => setIsDialogOpen(false)}
               className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
             >
-              <SquaresIntersect size={28} className="mr-2" />
+              <Combine size={28} className="mr-2" />
               <span>Integrations</span>
             </Link>
             <Link
@@ -186,13 +202,19 @@ const ConsoleBar = () => {
         <div className="relative flex items-center gap-3 p-2 cursor-pointer hover:bg-muted">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Avatar className="h-8 w-8 rounded-full">
-                <AvatarImage
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face"
-                  alt="Avatar"
-                />
-                <AvatarFallback>CB</AvatarFallback>
-              </Avatar>
+              <div
+                className={`rounded-full p-1 ${
+                  isConnected ? "active bg-green-500" : "inactive bg-red-500"
+                } transition-colors duration-300`}
+              >
+                <Avatar className="h-8 w-8 rounded-full">
+                  <AvatarImage
+                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face"
+                    alt="Avatar"
+                  />
+                  <AvatarFallback>CB</AvatarFallback>
+                </Avatar>
+              </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuItem className="cursor-pointer">
@@ -209,17 +231,18 @@ const ConsoleBar = () => {
 
         <Sheet>
           <SheetTrigger>
-            <Bell size={24} strokeWidth={1.5} />
-
-            {/* {unreadCount > 0 && (
-            <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )} */}
+            <div className="relative">
+              <Bell size={20} strokeWidth={1.5} className="md:w-6 md:h-6" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] md:text-xs rounded-full h-4 w-4 md:h-5 md:w-5 flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </div>
           </SheetTrigger>
           <SheetContent
             side="right"
-            className="max-md:w-[600px] sm:w-[80%] overflow-y-scroll"
+            className="w-[90vw] md:w-[600px] lg:w-[800px] overflow-y-scroll"
           >
             <SheetHeader>
               <SheetTitle>Notifications</SheetTitle>
