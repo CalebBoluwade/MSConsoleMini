@@ -70,7 +70,7 @@ export const TremorColor = (status: string): string => {
     case "healthy":
       return "emerald";
     case "escalation":
-      return "amber";
+      return "orange";
     case "acknowledged":
       return "sky";
     case "degraded":

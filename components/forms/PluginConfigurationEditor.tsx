@@ -103,9 +103,10 @@ const PluginConfigurationEditor: React.FC<PluginEditorProps> = ({
           // Parse existing configuration if available
           let existingConfig: Record<string, any> = {};
           try {
-            existingConfig = selectedMonitor.Configuration
+            const monitorConfig = selectedMonitor.Configuration
               ? JSON.parse(selectedMonitor.Configuration)
               : {};
+            existingConfig = monitorConfig[plugin.Id] || {};
           } catch (err) {
             console.error(
               `Invalid JSON in plugin ${plugin.Id} configuration:`,
@@ -115,7 +116,6 @@ const PluginConfigurationEditor: React.FC<PluginEditorProps> = ({
 
           // Initialize with defaults and existing values
           Object.entries(config.fields).forEach(([key, propConfig]) => {
-            console.log(key, existingConfig[key], propConfig.default);
             pluginConfig[key] = existingConfig[key] ?? propConfig.default;
           });
 

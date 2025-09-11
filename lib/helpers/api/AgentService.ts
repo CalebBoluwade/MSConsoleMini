@@ -1,9 +1,10 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createApi } from "@reduxjs/toolkit/query/react";
 import { DeployAgentRequestPayload } from "../schema/agent";
+import { axiosBaseQuery } from "../axiosInstance";
 
 export const AgentAPI = createApi({
   reducerPath: "Agent",
-  baseQuery: fetchBaseQuery({
+  baseQuery: axiosBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL + "/v1/agents",
   }),
   tagTypes: ["Agent"],
@@ -38,7 +39,9 @@ export const AgentAPI = createApi({
     }),
 
     getAvailableVersions: builder.query<{ versions: string[] }, void>({
-      query: () => "/versions",
+      query: () => ({
+        url: "/versions",
+      }),
       providesTags: ["Agent"],
     }),
   }),

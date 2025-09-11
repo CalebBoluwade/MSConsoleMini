@@ -8,7 +8,7 @@ export default function ConsoleLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="px-2 mt-18 w-full mx-auto --overflow-y-scroll --h-[calc(100dvh-50px)]">
+    <main className="shadow-lg rounded-md px-8 py-2 mt-18 w-full mx-auto --overflow-y-scroll min-h-[calc(100dvh-80px)]">
       <ConsoleBar />
       {children}
     </main>

@@ -56,7 +56,7 @@ const PluginCard = React.memo(
             : "hover:bg-accent hover:shadow-sm cursor-pointer"
         }`}
         onClick={handleClick}
-        role="button"
+        // role="button"
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {

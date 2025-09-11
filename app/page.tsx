@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense } from "react";
+import React from "react";
 import dynamic from "next/dynamic";
 import ConsoleBar from "@/components/ConsoleBar";
 
@@ -10,12 +10,12 @@ const AllDevices = dynamic(() => import("@/components/pages/AllDevices"), {
 
 export default function HomePage() {
   return (
-    <Suspense>
+    // <Suspense>
     <React.Fragment>
       <ConsoleBar />
 
       <AllDevices />
     </React.Fragment>
-    </Suspense>
+    // </Suspense>
   );
 }

@@ -52,7 +52,7 @@ const MonitorTable = ({
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="max-w-60 truncate flex items-center justify-start text-xl font-medium text-muted-foreground">
+        <div className="max-w-60 truncate flex items-center justify-start text-sm font-medium text-muted-foreground">
           {row.original.ServiceName}
         </div>
       ),
@@ -69,9 +69,9 @@ const MonitorTable = ({
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="flex items-center justify-center text-center text-sm text-muted-foreground">
+        <code className="bg-gray-100 dark:bg-black/20 font-extrabold py-2 rounded flex items-center justify-center text-center text-sm text-muted-foreground">
           {row.original.IPAddress}
-        </div>
+        </code>
       ),
     }),
     columnHelper.accessor("checkInterval", {
@@ -130,7 +130,7 @@ const MonitorTable = ({
     columnHelper.accessor("Plugins", {
       header: "Plugins",
       cell: ({ row }) => (
-        <Badge className="p-2 font-bold text-xl" variant="outline">
+        <Badge className="p-1 font-bold text-lg" variant="outline">
           {(row.original.Plugins ?? []).length}
         </Badge>
       ),
@@ -148,13 +148,13 @@ const MonitorTable = ({
       ),
       cell: ({ row }) => {
         const date = new Date(row.getValue("CreatedAt"));
-        return date.toLocaleString();
+        return date.toISOString();
       },
     }),
     columnHelper.accessor("Metrics", {
       header: "Overview",
       cell: ({ row }) => (
-        <TremorCard className="bg-accent rounded flex max-w-lg items-center justify-between px-4 py-3.5">
+        <TremorCard className="bg-accent rounded flex items-center justify-between gap-1 px-2 py-3.5">
           {(row.original.Metrics ?? []).length !== 0 ? (
             <>
               <SparkAreaChart
@@ -183,17 +183,17 @@ const MonitorTable = ({
         </TremorCard>
       ),
     }),
-    columnHelper.accessor("SystemMonitorId", {
-      header: "Monitor ID",
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          className="h-8 px-2 lg:px-3 flex items-center truncate justify-center text-center text-sm text-muted-foreground"
-        >
-          {row.original.SystemMonitorId.slice(0, 12)}...
-        </Button>
-      ),
-    }),
+    // columnHelper.accessor("SystemMonitorId", {
+    //   header: "Monitor ID",
+    //   cell: ({ row }) => (
+    //     <Button
+    //       variant="ghost"
+    //       className="h-8 px-2 lg:px-3 flex items-center truncate justify-center text-center text-sm text-muted-foreground"
+    //     >
+    //       {row.original.SystemMonitorId.slice(0, 12)}...
+    //     </Button>
+    //   ),
+    // }),
     columnHelper.display({
       id: "actions",
       header: "Actions",

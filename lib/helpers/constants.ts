@@ -52,6 +52,44 @@ export const AuthTypes = [
   { value: 'custom', label: 'Custom Headers' }
 ] as const;
 
+type MetricType =
+  | "cpu_usage"
+  | "memory_usage"
+  | "disk_free_space"
+  | "network_latency"
+  | "error_rate"
+  | "request_count";
+
+type DurationType = "1m" | "5m" | "10m" | "15m" | "30m" | "1h";
+
+interface MetricOption {
+  value: MetricType;
+  label: string;
+}
+
+interface DurationOption {
+  value: DurationType;
+  label: string;
+}
+
+export const metrics: MetricOption[] = [
+    { value: "cpu_usage", label: "CPU Usage (%)" },
+    { value: "memory_usage", label: "Memory Usage (%)" },
+    { value: "disk_free_space", label: "Disk Free Space (%)" },
+    { value: "network_latency", label: "Network Latency (ms)" },
+    { value: "error_rate", label: "Error Rate (%)" },
+    { value: "request_count", label: "Request Count" },
+  ] as const;
+
+export const durations: DurationOption[] = [
+    { value: "1m", label: "1 minute" },
+    { value: "5m", label: "5 minutes" },
+    { value: "10m", label: "10 minutes" },
+    { value: "15m", label: "15 minutes" },
+    { value: "30m", label: "30 minutes" },
+    { value: "1h", label: "1 hour" },
+  ] as const;
+
 export enum HttpMethods {
   GET = "GET",
   POST = "POST",

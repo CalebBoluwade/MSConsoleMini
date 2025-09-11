@@ -1,12 +1,7 @@
 "use client";
 
-import AlertRuleManagement from "@/components/AlertRuleManagement";
-import { Suspense } from "react";
+import Rules from "@/components/pages/Rules";
 
 export default function AlertManagementPage() {
-  return (
-    <Suspense>
-      <AlertRuleManagement />
-    </Suspense>
-  );
+  return <Rules />;
 }

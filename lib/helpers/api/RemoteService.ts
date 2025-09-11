@@ -1,8 +1,9 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createApi } from "@reduxjs/toolkit/query/react";
+import { axiosBaseQuery } from "../axiosInstance";
 
 export const RemoteMonitorsAPI = createApi({
   reducerPath: "Remote",
-  baseQuery: fetchBaseQuery({
+  baseQuery: axiosBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL + "/v1"
   }),
   tagTypes: ["RemoteMonitors"],

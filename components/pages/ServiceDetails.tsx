@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -403,8 +404,9 @@ const ServiceDetails: React.FC = () => {
       <AnimatePresence key={"results"}>
         {/* Plugin Results Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          
           {selectedMonitorResult && (
-            <DialogContent className="max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-h-[85vh] overflow-y-auto">
               <div className="space-y-6 mt-2 relative">
                 {/* System Overview */}
                 <Card className="py-2">
@@ -495,11 +497,11 @@ const ServiceDetails: React.FC = () => {
                 </div> */}
 
                 {/* Actions */}
-                <div className="flex justify-end pt-4 border-t">
+                <DialogFooter className="flex justify-end pt-4 border-t">
                   <Button onClick={closePluginModal} variant="outline">
                     Close
                   </Button>
-                </div>
+                </DialogFooter>
               </div>
             </DialogContent>
           )}

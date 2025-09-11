@@ -44,17 +44,16 @@ import { useGetAllMonitorsQuery } from "@/lib/helpers/api/MonitorService";
 import useTimer from "@/lib/hooks/useTimer";
 import { sanitizeContent } from "@/lib/helpers/utils";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 // const orbitron = Orbitron({ subsets: ["latin"] });
 const ConsoleBar = () => {
   const pathname = usePathname();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isConnected, setIsConnected] = useState(webSocketService.isConnected);
+  const [isConnected, setIsConnected] = useState(false);
   const timer = useTimer();
 
-  const [connectionAttempts] = useState(
-    webSocketService.connectionAttempts
-  );
+  const [connectionAttempts] = useState(webSocketService.connectionAttempts);
 
   const { data: monitors, isLoading: isMonitorsLoading } =
     useGetAllMonitorsQuery(null, {
@@ -80,17 +79,11 @@ const ConsoleBar = () => {
   );
 
   useEffect(() => {
+    setIsConnected(webSocketService.isConnected);
+
     const connectionInterval = setInterval(() => {
       setIsConnected(webSocketService.isConnected);
-    }, 2000); // Check every 2 seconds instead of 1
-
-    // const unsubscribeConnection = webSocketService.subscribe(
-    //   "connectionChange",
-    //   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    //   (data: any) => {
-    //     setIsConnected(data.connected);
-    //   }
-    // );
+    }, 2000);
 
     return () => {
       clearInterval(connectionInterval);
@@ -100,12 +93,12 @@ const ConsoleBar = () => {
   const unreadCount = 0;
 
   return (
-    <header className="fixed top-0 right-0 left-0 z-50 flex flex-col md:flex-row items-center px-2 md:px-3 pl-1 py-1 justify-between gap-2 transition-all shadow-md dark:bg-dark-tremor-brand-faint/35 backdrop-blur-sm bg-opacity-70">
+    <motion.header className="fixed top-0 right-0 left-0 z-50 flex flex-col md:flex-row items-center px-2 md:px-6 lg:px-8 pl-1 py-1 justify-between gap-2 transition-all --shadow-md dark:bg-dark-tremor-brand-faint/35 backdrop-blur-sm bg-opacity-70">
       <div className="items-center flex flex-col md:flex-row gap-2 md:gap-3 font-bold w-full md:max-w-[50%]">
         <p className="text-sm md:text-md capitalize whitespace-nowrap">
           {sanitizeContent(getCurrentPageHeader(pathname))}
         </p>
-        <div className="w-full max-w-full">
+        <div className="w-full min-w-full">
           <ConsoleBarSearch
             isLoading={isMonitorsLoading}
             className="w-full min-w-0"
@@ -203,6 +196,7 @@ const ConsoleBar = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div
+                suppressHydrationWarning
                 className={`rounded-full p-1 ${
                   isConnected ? "active bg-green-500" : "inactive bg-red-500"
                 } transition-colors duration-300`}
@@ -254,7 +248,7 @@ const ConsoleBar = () => {
           </SheetContent>
         </Sheet>
       </div>
-    </header>
+    </motion.header>
   );
 };
 

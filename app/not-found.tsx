@@ -10,7 +10,7 @@ export default function NotFound() {
         404 | Not Found
       </h1>
 
-      <Image src={"/notFound.gif"} alt="notFound" width={500} height={500} />
+      <Image src={"/notFound.gif"} alt="notFound" priority width={500} height={500} />
 
       <div className="relative flex items-center justify-center">
         <Button onClick={() => (window.location.href = "/")}>

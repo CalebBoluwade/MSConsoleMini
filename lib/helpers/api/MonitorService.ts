@@ -1,6 +1,7 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createApi } from "@reduxjs/toolkit/query/react";
 import { ServiceEntitySchema } from "../schema/service";
 import { z } from "zod";
+import { axiosBaseQuery } from "../axiosInstance";
 
 export const isProd =
   process.env.NODE_ENV === "production"
@@ -9,21 +10,27 @@ export const isProd =
 
 export const MonitorAPI = createApi({
   reducerPath: "Monitor",
-  baseQuery: fetchBaseQuery({
+  baseQuery: axiosBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL + "/v1",
   }),
   tagTypes: ["ServiceMonitors"],
   endpoints: (builder) => ({
     getAllMonitors: builder.query<BaseMonitor[], null | void>({
-      query: () => "/systemmonitor",
+      query: () => ({
+        url: "/systemmonitor",
+      }),
     }),
 
     getSingleMonitor: builder.query<BaseMonitor, string>({
-      query: (id) => `/systemmonitor/${id}`,
+      query: (id) => ({
+        url: `/systemmonitor/${id}`,
+      }),
     }),
 
     getMonitorPlugins: builder.query<MonitorPlugin[], null | void>({
-      query: () => "/Plugins",
+      query: () => ({
+        url: "/Plugins",
+      }),
     }),
 
     // GET /v1/MonitorResults
@@ -31,12 +38,16 @@ export const MonitorAPI = createApi({
       Pick<BaseMonitor, "ServiceName" | "IPAddress" | "CurrentHealthCheck">[][],
       null
     >({
-      query: () => `/MonitorResults`,
+      query: () => ({
+        url: `/MonitorResults`,
+      }),
     }),
 
     // GET /v1/MonitorResults/:id
     getMonitoringResultsById: builder.query<MonitoringResult[], string>({
-      query: (id) => `/MonitorResults/${id}`,
+      query: (id) => ({
+        url: `/MonitorResults/${id}`,
+      }),
     }),
 
     // POST /systemmonitor

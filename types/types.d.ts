@@ -1,6 +1,15 @@
 type ServiceType = "AGENT" | "Web Modules" | "Network" | "Server";
 
-type StatusText = "Healthy" | "Escalation" | "Acknowledged" | "Degraded" | "UnknownStatus" | "InvalidConfiguration" | "Scheduled";
+type Roles = "MS005" | "MS001" | "ADMIN" | "A";
+
+type StatusText =
+  | "Healthy"
+  | "Escalation"
+  | "Acknowledged"
+  | "Degraded"
+  | "UnknownStatus"
+  | "InvalidConfiguration"
+  | "Scheduled";
 
 type statuses = Array<StatusText>;
 
@@ -60,7 +69,7 @@ interface BaseMonitor {
   IsServiceIssueAcknowledged: boolean;
   // CreatedAt: string;
   Metadata: MonitorMetaData;
-};
+}
 
 interface MonitorGroup {
   id: string;
@@ -126,7 +135,82 @@ type HeartbeatMessage = {
   timestamp: number;
 };
 
-type WebSocketSubscriber = (message: WebSocketMessage) => void;
+type MonitoringRule = {
+  id: string;
+  name: string;
+  description?: string;
+  ruleType: "custom" | "threshold" | "anomaly";
+  metricName: string;
+  lastTriggered: string;
+  conditions: RuleCondition;
+  alertChannels: string[];
+  createdAt: string;
+  updatedAt: string;
+  severity: string;
+  isActive: boolean;
+  recipientsUserIds: string[];
+};
+
+// Rule Condition
+interface RuleCondition {
+  Operator: ">" | "<" | ">=" | "<=" | "==" | "!=" | "rate_gt" | "rate_lt";
+  Threshold: number;
+  EvaluationWindow: number; // in seconds or minutes
+  ConsecutiveBreaches: number;
+  AggregationMethod?: "max" | "min" | "avg" | "sum" | "count";
+}
+
+// Query parameters for listing rules
+interface RuleQueryParameters {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  ruleType?: "custom" | "threshold" | "anomaly";
+  isActive?: boolean;
+}
+
+// Request payloads
+interface CreateRuleRequest {
+  name: string;
+  serviceId: string;
+  description?: string;
+  metricName: string;
+  conditions: RuleCondition;
+  createdBy: string;
+}
+
+interface UpdateRuleRequest {
+  name?: string;
+  serviceId: string;
+  description?: string;
+  ruleType?: "custom" | "threshold" | "anomaly";
+  metricName?: string;
+  conditions?: RuleCondition;
+  isActive?: boolean;
+}
+
+interface RuleConflict {
+  conflictRuleId: string;
+  conflictField: string;
+  description: string;
+}
+
+interface PagedResult<T> {
+  data: T[];
+  page: number;
+  pageSiz: number;
+  totalCount: number;
+  totalPages: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+}
+
+// Generic API wrapper response
+interface ApiResponse<T> {
+  data: T;
+  success: boolean;
+  message: string;
+}
 
 interface DBSchema {
   groups: {
@@ -141,23 +225,58 @@ interface DBSchema {
   };
 }
 
-interface APIResponsePayload<T> {
-    Message: string;
-    MetaData: Record<string, number>;
-    Data: Array<T>;
-    Cause: string;
-  }
+interface APIResponse<T> {
+  data: APIResponsePayload<T>;
+  error?: undefined;
+}
 
-  interface APIResponse<T> {
-    data: APIResponsePayload<T>;
-    error?: undefined;
-  }
-
+interface JWTAuthPayload {
+  Role: Array<Roles>;
+}
 
 interface User {
   id: string;
-  name: string;
-  jobTitle: string;
+  username: string;
+  title: string;
+  department: string;
   avatar: string;
-  initials: string;
+  groups: string[];
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
 }
+
+interface UserAuthLoginResponse {
+  isAuthenticated: boolean;
+  message: string;
+  userData: User;
+}
+
+// interface AlertRule {
+//   id: string;
+//   name: string;
+//   description: string;
+//   team: string[];
+//   metric: MetricType;
+//   condition: ConditionType;
+//   threshold: number;
+//   duration: DurationType;
+//   severity: SeverityType;
+//   status: StatusType;
+//   notifications: NotificationType[];
+//   targetType: TargetType;
+//   targetId: string;
+//   created: string;
+//   name: string;
+//   description: string;
+//   team: string[];
+//   metric: MetricType;
+//   condition: ConditionType;
+//   threshold: string | number;
+//   duration: DurationType;
+//   severity: SeverityType;
+//   notifications: NotificationType[];
+//   targetType: TargetType;
+//   targetId: string;
+//   lastTriggered: string | null;
+// }

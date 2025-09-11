@@ -485,7 +485,7 @@ const ServiceManager: React.FC<ServiceManagerFormProps> = ({
                   open={showPluginSelector}
                   onOpenChange={setShowPluginSelector}
                 >
-                  <SheetTrigger>
+                  <SheetTrigger asChild>
                     <Button
                       type="button"
                       variant="outline"

@@ -43,6 +43,7 @@ import {
 } from "@/lib/helpers/api/MonitorService";
 import { toast } from "sonner";
 import MonitorTable from "@/lib/helpers/tables/MonitoredServices";
+import Header from "../Header";
 
 const ServicesManagement = () => {
   const { data, isLoading, error, refetch } = useGetAllMonitorsQuery();
@@ -136,21 +137,16 @@ const ServicesManagement = () => {
 
   return (
     <AnimatePresence>
-      <motion.div className="space-y-7 space-x-1">
-        {/* Table */}
+      <motion.div className="space-y-6 space-x-1">
         <Card className="border-0 py-0 px-1">
-          {/* Header */}
           <CardHeader>
-            <motion.div className="mt-4 space-y-6 rounded-lg px-6 py-4 shadow-sm border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    Monitor Manager
-                  </h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    Organize and monitor your entities
-                  </p>
-                </div>
+            {/* Header */}
+            <Header
+              title="Monitor Manager"
+              subTitle="Get To The Fundamentals"
+              subTitle2="Organize and monitor your entities"
+              image="Programmer"
+              ctaButton={
                 <Button
                   variant="outline"
                   onClick={() => setIsEditDialogOpen(true)}
@@ -159,9 +155,10 @@ const ServicesManagement = () => {
                   <Plus className="w-4 h-4 mr-2" />
                   Create Service Monitor
                 </Button>
-              </div>
-            </motion.div>
+              }
+            />
           </CardHeader>
+
           <CardContent>
             <div className="rounded-md border">
               <Table>

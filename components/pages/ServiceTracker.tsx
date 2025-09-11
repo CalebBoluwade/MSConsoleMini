@@ -53,7 +53,7 @@ const ServiceTracker = () => {
   }
 
   return (
-    <div className="p-2 space-y-3">
+    <div className="px-4 py-3 space-y-3">
       {/* Optional: group header */}
       {(data ?? []).length > 0
         ? data.map((group, groupIndex) => {
@@ -107,7 +107,7 @@ const ServiceTracker = () => {
                       color: TremorColor(item.CurrentHealthCheck),
                       entity: item.IPAddress,
                     }))}
-                    className="mt-1 flex w-full text-lg font-semibold gap-0.5 rounded"
+                    className="mt-1 h-7 flex w-full text-base font-semibold gap-0.5 rounded"
                   />
                 </CardContent>
               </Card>

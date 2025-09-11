@@ -240,20 +240,20 @@ const ConsoleBarSearch = ({
           variant="outline"
           disabled={disabled}
           className={cn(
-            "relative h-10 justify-between px-3 text-sm text-muted-foreground sm:mr-12",
+            "relative justify-between px-3 py-6 text-sm text-muted-foreground sm:mr-12",
             className
           )}
         >
           <span className="hidden lg:inline-flex">{placeholder}</span>
           <span className="inline-flex lg:hidden">Search...</span>
-          <div className="pointer-events-none absolute right-1.5 top-1.5 hidden items-center gap-1 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+          <div className="pointer-events-none absolute right-1.5 top-3 hidden items-center gap-1 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
             <span className="text-xs">⌘K</span>
           </div>
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-full p-0 --sm:w-[40rem]"
-        align="start"
+        className="w-full p-0 lg:w-[40rem]"
+        align="end"
         sideOffset={10}
       >
         <Command
