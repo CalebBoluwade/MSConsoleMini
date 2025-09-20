@@ -22,7 +22,7 @@ export const AgentAPI = createApi({
       query: (payload) => ({
         url: "/deploy",
         method: "POST",
-        body: payload,
+        data: payload,
       }),
       invalidatesTags: ["Agent"],
     }),
@@ -34,7 +34,7 @@ export const AgentAPI = createApi({
       query: (payload) => ({
         url: "/validate-ssh",
         method: "POST",
-        body: payload,
+        data: payload,
       }),
     }),
 

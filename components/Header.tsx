@@ -21,7 +21,7 @@ const Header = ({
 }) => {
   return (
     <motion.header className="relative my-4 rounded-lg flex justify-between lg:flex-row gap-4 lg:gap-8 bg-slate-100 dark:bg-black">
-      <div className="relative flex-1 max-w-screen-xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <div className="relative flex-1 --max-w-screen-xl px-4 py-12 sm:px-6 sm:py-12 lg:px-8">
         <div className="sm:flex sm:items-center gap-4">
           {icon}
           <div className="text-center sm:text-left">

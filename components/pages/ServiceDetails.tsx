@@ -53,6 +53,8 @@ import SystemChart from "../CPUChart";
 import DiskDrive from "../DiskDrive";
 import DeployNewAgent from "../forms/NewAgent";
 import PluginConfigurationEditor from "../forms/PluginConfigurationEditor";
+import AuthRequired from "@/lib/hooks/useAuthRequired";
+import { PageNameEnum } from "@/lib/config/site-map";
 
 const ServiceDetails: React.FC = () => {
   const { SystemMonitorId } = useParams();
@@ -163,7 +165,8 @@ const ServiceDetails: React.FC = () => {
           <Card className="py-2 min-w-[225px]">
             <CardHeader>
               <CardTitle className="flex justify-between items-center gap-4 text-xl font-bold --text-gray-900">
-                Monitor ({selectedMonitor?.IPAddress + ":" + selectedMonitor?.Port})
+                Monitor (
+                {selectedMonitor?.IPAddress + ":" + selectedMonitor?.Port})
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -249,8 +252,7 @@ const ServiceDetails: React.FC = () => {
                 Service Device: {selectedMonitor?.Device}
               </CardDescription>
               <CardDescription>
-                Monitored:{" "}
-                {getIntervalLabel(selectedMonitor?.checkInterval)}
+                Monitored: {getIntervalLabel(selectedMonitor?.checkInterval)}
               </CardDescription>
               <CardDescription>
                 Created: {new Date(selectedMonitor?.CreatedAt).toLocaleString()}
@@ -404,7 +406,6 @@ const ServiceDetails: React.FC = () => {
       <AnimatePresence key={"results"}>
         {/* Plugin Results Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          
           {selectedMonitorResult && (
             <DialogContent className="max-h-[85vh] overflow-y-auto">
               <div className="space-y-6 mt-2 relative">
@@ -548,4 +549,4 @@ const ServiceDetails: React.FC = () => {
   );
 };
 
-export default ServiceDetails;
+export default AuthRequired(PageNameEnum.SERVICE_MONITOR)(ServiceDetails);

@@ -52,6 +52,7 @@ const SystemChart = ({
     },
     {
       pollingInterval: 5 * 60 * 1000,
+      skipPollingIfUnfocused: true,
       refetchOnMountOrArgChange: true,
       refetchOnFocus: true
     }

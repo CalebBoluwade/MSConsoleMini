@@ -1,6 +1,6 @@
 type ServiceType = "AGENT" | "Web Modules" | "Network" | "Server";
 
-type Roles = "MS005" | "MS001" | "ADMIN" | "A";
+type Roles = "MS005" | "MS001" | "ADMIN" | "ALLSTAFF";
 
 type StatusText =
   | "Healthy"
@@ -138,6 +138,7 @@ type HeartbeatMessage = {
 type MonitoringRule = {
   id: string;
   name: string;
+  serviceId: string;
   description?: string;
   ruleType: "custom" | "threshold" | "anomaly";
   metricName: string;
@@ -149,13 +150,14 @@ type MonitoringRule = {
   severity: string;
   isActive: boolean;
   recipientsUserIds: string[];
+  recipients: User[];
 };
 
 // Rule Condition
 interface RuleCondition {
   Operator: ">" | "<" | ">=" | "<=" | "==" | "!=" | "rate_gt" | "rate_lt";
   Threshold: number;
-  EvaluationWindow: number; // in seconds or minutes
+  EvaluationWindow: string; // in seconds or minutes
   ConsecutiveBreaches: number;
   AggregationMethod?: "max" | "min" | "avg" | "sum" | "count";
 }
@@ -176,7 +178,6 @@ interface CreateRuleRequest {
   description?: string;
   metricName: string;
   conditions: RuleCondition;
-  createdBy: string;
 }
 
 interface UpdateRuleRequest {
@@ -237,19 +238,19 @@ interface JWTAuthPayload {
 interface User {
   id: string;
   username: string;
+  fullName: string;
+  displayName: string;
   title: string;
   department: string;
   avatar: string;
   groups: string[];
-  firstName: string;
-  lastName: string;
   phoneNumber: string;
 }
 
 interface UserAuthLoginResponse {
   isAuthenticated: boolean;
   message: string;
-  userData: User;
+  userData?: User;
 }
 
 // interface AlertRule {

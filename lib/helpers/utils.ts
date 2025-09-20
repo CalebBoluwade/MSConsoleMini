@@ -92,9 +92,8 @@ export const formatDate = (dateString: string) => {
 };
 
 export const sanitizeContent = (content: string): string => {
-  return content.replace(/[<>]/g, '');
+  return content.replace(/[<>]/g, "");
 };
-
 
 export const intervalOptions = [
   { label: "Every 30 seconds", cron: "*/30 * * * * *" },
@@ -107,7 +106,48 @@ export const intervalOptions = [
   { label: "Custom", cron: "" },
 ];
 
+export const evaluationWindowOptions = [
+  { label: "Last 5 minutes", value: "5m" },
+  { label: "Last 15 minutes", value: "15m" },
+  { label: "Last hour", value: "1h" },
+  { label: "Last 6 hours", value: "6h" },
+  { label: "Last 12 hours", value: "12h" },
+  { label: "Last 24 hours", value: "24h" },
+  { label: "Custom", value: "Custom" },
+];
+
+export const alertThrottleOptions = [
+  { label: "Every 5 minutes", value: "5m" },
+  { label: "Every 15 minutes", value: "15m" },
+  { label: "Every hour", value: "1h" },
+  { label: "Every 6 hours", value: "6h" },
+  { label: "Custom", value: "Custom" },
+];
+
 export const getIntervalLabel = (cron: string): string => {
   const match = intervalOptions.find((option) => option.cron === cron);
   return match?.label ?? `Custom: ${cron}`;
+};
+
+// Helper function to generate initials from service name
+export const generateInitials = (name: string) => {
+  if (!name) return "?";
+
+  // Split by common separators and filter out empty strings
+  const words = name.split(/[\s\-_\.]+/).filter((word) => word.length > 0);
+
+  if (words.length === 1) {
+    // Single word: take first 2-3 characters
+    return words[0].substring(0, Math.min(3, words[0].length)).toUpperCase();
+  } else if (words.length === 2) {
+    // Two words: take first character of each
+    return (words[0][0] + words[1][0]).toUpperCase();
+  } else {
+    // Multiple words: take first character of first 3 words
+    return words
+      .slice(0, 3)
+      .map((word) => word[0])
+      .join("")
+      .toUpperCase();
+  }
 };

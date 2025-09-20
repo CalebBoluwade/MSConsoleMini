@@ -1,6 +1,7 @@
 import ActionConfirmation from "@/components/ActionConfirmation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,34 @@ const MonitorTable = ({
     useState(false);
 
   const MonitorTableColumns = () => [
+    columnHelper.accessor("SystemMonitorId", {
+      id: "select",
+      header: ({ table }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    }),
     columnHelper.accessor("ServiceName", {
       header: ({ column }) => (
         <Button
@@ -52,7 +81,7 @@ const MonitorTable = ({
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="max-w-60 truncate flex items-center justify-start text-sm font-medium text-muted-foreground">
+        <div className="max-w-48 truncate flex items-center justify-start text-sm font-medium text-muted-foreground">
           {row.original.ServiceName}
         </div>
       ),

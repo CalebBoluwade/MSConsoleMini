@@ -1,71 +1,64 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { AuthAccess } from "@/lib/helpers/PageAccess";
+import { PageNameEnum } from "@/lib/config/site-map";
 import NoRights from "@/components/NoRights";
 import useAuth from "./useAuth";
 
 const AuthRequired =
-  (pageName: string) =>
+  (pageName: PageNameEnum) =>
   <Props extends object>(
     WrappedComponent: React.ComponentType<Props>
   ): React.FC<Props> => {
     const AuthComponent = (props: Props) => {
-      const { data: LoggedInUser, isAuth: sessionStatus } = useAuth();
-      const [Unauthorized, setUnauthorized] = useState(false);
+      const { isAuthenticated, userData: LoggedInUser, message } = useAuth();
       const router = useRouter();
 
-      const key: keyof AuthAccess = pageName;
       const AuthAllowedRoles: Roles[] = useMemo(
-        () => AuthAccess[key] ?? ["MS005"],
-        [key]
+        () =>
+          AuthAccess[pageName] ?? [
+            process.env.NEXT_PUBLIC_USER_GROUP_DEFAULT_ACCESS as Roles,
+          ],
+        []
       );
-      // console.log("Auth Page Roles", pageName, key, AuthAllowedRoles);
+
+      const hasPermission = useMemo(() => {
+        if (!isAuthenticated || !LoggedInUser?.groups) return false;
+        return AuthAllowedRoles.some((role) =>
+          LoggedInUser.groups.includes(role)
+        );
+      }, [isAuthenticated, LoggedInUser?.groups, AuthAllowedRoles]);
 
       useEffect(() => {
-        // Check if user is authenticated and has the required role
-        const userRole: Roles[] = LoggedInUser ? LoggedInUser.Role! : ["MS005"];
+        if (message !== "Loading..." && !isAuthenticated) {
+          const callbackUrl =
+            typeof window !== "undefined"
+              ? window.location.pathname || "/console"
+              : "/console";
+          router.push(`/auth?callbackUrl=${callbackUrl}`);
+        }
+      }, [isAuthenticated, message, router]);
 
-        const hasPermission =
-          sessionStatus &&
-          AuthAllowedRoles.some((role) => LoggedInUser?.Role?.includes(role));
-        console.info(LoggedInUser, userRole, AuthAllowedRoles, hasPermission);
+      if (message === "Loading...") {
+        return <div>Loading...</div>;
+      }
 
-        const logOutTime = setTimeout(() => {
-          if (!sessionStatus) {
-            console.log("User is not logged in and not authorized");
+      if (!isAuthenticated) {
+        return null;
+      }
 
-            router.push(
-              `/auth?callbackUrl=${
-                location.pathname ? location.pathname : "/console"
-              }`,
-              {
-                scroll: true,
-              }
-            );
-          }
+      if (!hasPermission) {
+        return (
+          <NoRights
+            allowedRoles={AuthAllowedRoles}
+            userRoles={LoggedInUser?.groups || []}
+          />
+        );
+      }
 
-          if (sessionStatus && !hasPermission) {
-            console.log("User is logged in but not authorized");
-            // router.push("/console/unauthorized", { scroll: true });
-            setUnauthorized(true);
-          }
-        }, 1000);
-
-        // Redirect to login page or handle unauthorized access
-        return () => clearTimeout(logOutTime);
-      }, [LoggedInUser, AuthAllowedRoles, sessionStatus, router]);
-
-      // Render the wrapped component if authorized
-      return Unauthorized ? (
-        <NoRights
-          allowedRoles={AuthAllowedRoles}
-          userRoles={LoggedInUser ? LoggedInUser.Role : []}
-        />
-      ) : (
-        <WrappedComponent {...props} />
-      );
+      return <WrappedComponent {...props} />;
     };
 
     return AuthComponent;

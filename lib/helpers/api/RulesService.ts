@@ -1,64 +1,75 @@
 // lib-client.ts
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-
-// Types you already have in your codebase
-// import type { 
-//   MonitoringRule, 
-//   CreateRuleRequest, 
-//   UpdateRuleRequest, 
-//   RuleQueryParameters, 
-//   RuleConflict, 
-//   ApiResponse, 
-//   PagedResult 
-// } from '@/types';
+import { createApi } from "@reduxjs/toolkit/query/react";
+import { axiosBaseQuery } from "../axiosInstance";
 
 export const RulesAPI = createApi({
-  reducerPath: 'Rules',
-  baseQuery: fetchBaseQuery({
+  reducerPath: "Rules",
+  baseQuery: axiosBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL + "/v1",
-    prepareHeaders: (headers) => {
-      headers.set('Content-Type', 'application/json');
-      return headers;
-    },
   }),
-  tagTypes: ['Rules'],
+  tagTypes: ["Rules"],
   endpoints: (builder) => ({
-    getAllRules: builder.query<APIResponse<PagedResult<MonitoringRule>>, RuleQueryParameters | null>({
+    getAllRules: builder.query<
+      APIResponse<PagedResult<MonitoringRule>>,
+      RuleQueryParameters | null
+    >({
       query: (params) => ({
-        url: '/rules',
+        url: "/rules",
         params: params ?? undefined,
       }),
-      providesTags: ['Rules'],
+      providesTags: ["Rules"],
     }),
     getRule: builder.query<ApiResponse<MonitoringRule>, string>({
-      query: (id) => `/rules/${id}`,
-      providesTags: (result, error, id) => [{ type: 'Rules', id }],
+      query: (id) => ({ url: `/rules/${id}` }),
+      providesTags: (result, error, id) => [{ type: "Rules", id }],
     }),
-    createRule: builder.mutation<ApiResponse<MonitoringRule>, CreateRuleRequest>({
+    createRule: builder.mutation<
+      ApiResponse<MonitoringRule>,
+      CreateRuleRequest
+    >({
       query: (rule) => ({
-        url: '/rules',
-        method: 'POST',
-        body: rule,
+        url: "/rules",
+        method: "POST",
+        data: rule,
+        headers: {
+          "Content-Type": "application/json", // Ensure proper content type
+        },
       }),
-      invalidatesTags: ['Rules'],
+      invalidatesTags: ["Rules"],
     }),
-    updateRule: builder.mutation<ApiResponse<MonitoringRule>, { id: string; rule: UpdateRuleRequest }>({
+    updateRule: builder.mutation<
+      ApiResponse<MonitoringRule>,
+      { id: string; rule: UpdateRuleRequest }
+    >({
       query: ({ id, rule }) => ({
         url: `/rules/${id}`,
-        method: 'PUT',
-        body: rule,
+        method: "PUT",
+        data: rule,
+        headers: {
+          "Content-Type": "application/json", // Ensure proper content type
+        },
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Rules', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: "Rules", id }],
     }),
     deleteRule: builder.mutation<ApiResponse<boolean>, string>({
       query: (id) => ({
         url: `/rules/${id}`,
-        method: 'DELETE',
+        method: "DELETE",
       }),
-      invalidatesTags: ['Rules'],
+      invalidatesTags: ["Rules"],
     }),
     getRuleConflicts: builder.query<RuleConflict[], string>({
-      query: (id) => `/rules/${id}/conflicts`,
+      query: (id) => ({ url: `/rules/${id}/conflicts` }),
+    }),
+    checkRuleConflicts: builder.mutation<
+      { conflicts: RuleConflict[] },
+      { metricName: string; threshold: number; serviceId?: string; excludeRuleId?: string }
+    >({
+      query: (params) => ({
+        url: "/rules/check-conflicts",
+        method: "POST",
+        data: params,
+      }),
     }),
   }),
 });
@@ -71,4 +82,5 @@ export const {
   useUpdateRuleMutation,
   useDeleteRuleMutation,
   useGetRuleConflictsQuery,
+  useCheckRuleConflictsMutation,
 } = RulesAPI;

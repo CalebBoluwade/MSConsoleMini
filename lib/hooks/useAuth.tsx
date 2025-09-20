@@ -1,40 +1,36 @@
-// "use client";
+"use client";
 
-import { useLayoutEffect, useState, cache } from "react";
-import { decrypt } from "../helpers/auth/sessions";
+import { useState, useEffect } from "react";
 
-const useAuth = () => {
-  const [loggedInUser, setLoggedInUser] = useState<{
-    data: JWTAuthPayload | null;
-    isAuth: boolean;
-  }>({ data: null, isAuth: false });
+const useAuth = (): UserAuthLoginResponse => {
+  const [authData, setAuthData] = useState<UserAuthLoginResponse>({
+    isAuthenticated: false,
+    message: "Loading...",
+  });
 
-  useLayoutEffect(() => {
-    const GetUserSessionData = cache(async () => {
-      const usersession = localStorage.getItem("session")?.replaceAll('"', "");
-
-      const user = await decrypt(usersession!);
-
-      if (!user) {
-        return setLoggedInUser({ data: null, isAuth: false });
+  useEffect(() => {
+    try {
+      const usersession = localStorage.getItem("session");
+      if (!usersession) {
+        setAuthData({
+          isAuthenticated: false,
+          message: "No session found",
+        });
+        return;
       }
 
-      if (user) {
-        console.log("decrypted session data >>> ", user);
-     
-        return setLoggedInUser({ data: user, isAuth: true });
-      }
-    });
-
-    GetUserSessionData();
-
-    return () => {};
+      const user = JSON.parse(usersession);
+      setAuthData(user);
+    } catch (error) {
+      console.error("Auth error:", error);
+      setAuthData({
+        isAuthenticated: false,
+        message: "Error retrieving session",
+      });
+    }
   }, []);
 
-  return loggedInUser;
-  // return GetUserData;
+  return authData;
 };
-
-
 
 export default useAuth;

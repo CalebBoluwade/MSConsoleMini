@@ -1,8 +1,6 @@
-export type AuthAccess = Record<string, Array<Roles>>;
+import { PageNameEnum } from "../config/site-map";
+import authConfig from "../../config/auth-access.json";
 
-export const AuthAccess: Record<string, Array<Roles>> = {
-  MissionControl: ["MS005", "ADMIN"],
-  ConsoleMain: ["MS005", "ADMIN"],
-  Live: [],
-  Admin: ["ADMIN"],
-};
+export type AuthAccess = Record<PageNameEnum, Array<Roles>>;
+
+export const AuthAccess: AuthAccess = authConfig as AuthAccess;

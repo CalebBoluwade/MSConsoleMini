@@ -15,6 +15,7 @@ import {
   Settings,
   Combine,
   WifiOff,
+  ShieldUser,
 } from "lucide-react";
 import { webSocketService } from "@/lib/helpers/service/websocket.service";
 import { Button } from "./ui/button";
@@ -47,10 +48,20 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 
 // const orbitron = Orbitron({ subsets: ["latin"] });
+interface INotification {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+}
+
 const ConsoleBar = () => {
   const pathname = usePathname();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [notifications, setNotifications] = useState<INotification[]>([]);
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
   const timer = useTimer();
 
   const [connectionAttempts] = useState(webSocketService.connectionAttempts);
@@ -90,11 +101,9 @@ const ConsoleBar = () => {
     };
   }, [handleConnectionChange]);
 
-  const unreadCount = 0;
-
   return (
-    <motion.header className="fixed top-0 right-0 left-0 z-50 flex flex-col md:flex-row items-center px-2 md:px-6 lg:px-8 pl-1 py-1 justify-between gap-2 transition-all --shadow-md dark:bg-dark-tremor-brand-faint/35 backdrop-blur-sm bg-opacity-70">
-      <div className="items-center flex flex-col md:flex-row gap-2 md:gap-3 font-bold w-full md:max-w-[50%]">
+    <motion.header className="w-full z-50 flex flex-col md:flex-row items-center px-2 md:px-2 lg:px-4 pl-1 py-1 justify-between gap-2 transition-all --shadow-md dark:bg-dark-tremor-brand-faint/35 backdrop-blur-sm bg-opacity-70 mb-4">
+      <div className="items-center flex flex-col md:flex-row gap-2 md:gap-3 font-bold">
         <p className="text-sm md:text-md capitalize whitespace-nowrap">
           {sanitizeContent(getCurrentPageHeader(pathname))}
         </p>
@@ -147,6 +156,14 @@ const ConsoleBar = () => {
               <UsersRound size={28} className="mr-2" />
               <span>Monitor Groups</span>
             </Link>
+                   <Link
+              href={"/console/admin"}
+              onClick={() => setIsDialogOpen(false)}
+              className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
+            >
+              <ShieldUser size={28} className="mr-2" />
+              <span>Admin</span>
+            </Link>
             <Link
               href={"/console/monitors"}
               onClick={() => setIsDialogOpen(false)}
@@ -172,7 +189,7 @@ const ConsoleBar = () => {
               <span>Integrations</span>
             </Link>
             <Link
-              href={"/console/alerts"}
+              href={"/console/rules"}
               onClick={() => setIsDialogOpen(false)}
               className="cursor-pointer p-2 inline-flex gap-2 items-center hover:bg-muted rounded"
             >
@@ -223,8 +240,12 @@ const ConsoleBar = () => {
           </DropdownMenu>
         </div>
 
-        <Sheet>
-          <SheetTrigger>
+        <Sheet
+          onOpenChange={() => {
+            setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+          }}
+        >
+          <SheetTrigger asChild>
             <div className="relative">
               <Bell size={20} strokeWidth={1.5} className="md:w-6 md:h-6" />
               {unreadCount > 0 && (
@@ -245,6 +266,20 @@ const ConsoleBar = () => {
                 account and remove your data from our servers.
               </SheetDescription>
             </SheetHeader>
+
+            {/* // Add notification system */}
+            <div>
+              {notifications.map((notification) => (
+                <div key={notification.id}>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{notification.title}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {notification.message}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </SheetContent>
         </Sheet>
       </div>

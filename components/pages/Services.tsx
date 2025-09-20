@@ -10,6 +10,9 @@ import {
   flexRender,
   type SortingState,
   type ColumnFiltersState,
+  VisibilityState,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
 } from "@tanstack/react-table";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -19,6 +22,9 @@ import {
   ChevronsLeft,
   ChevronRight,
   ChevronsRight,
+  Download,
+  FileSpreadsheet,
+  FileText,
 } from "lucide-react";
 import {
   Dialog,
@@ -26,6 +32,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Table,
@@ -44,12 +56,18 @@ import {
 import { toast } from "sonner";
 import MonitorTable from "@/lib/helpers/tables/MonitoredServices";
 import Header from "../Header";
+import AuthRequired from "@/lib/hooks/useAuthRequired";
+import { PageNameEnum } from "@/lib/config/site-map";
+import { exportToExcel, exportToPDF } from "@/lib/helpers/exportUtils";
+import ActionConfirmation from "../ActionConfirmation";
 
 const ServicesManagement = () => {
   const { data, isLoading, error, refetch } = useGetAllMonitorsQuery();
   const [deleteServiceMonitor] = useDeleteServiceMonitorMutation();
 
   const [serviceMonitors, setServiceMonitors] = useState<BaseMonitor[]>([]);
+  const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
+  const [exportType, setExportType] = useState<"excel" | "pdf">("excel");
 
   useEffect(() => {
     if (data) {
@@ -58,27 +76,72 @@ const ServicesManagement = () => {
   }, [data, serviceMonitors]);
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [rowSelection, setRowSelection] = React.useState({});
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
   const [sorting, setSorting] = useState<SortingState>([
     { id: "CreatedAt", desc: true },
   ]);
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+
   const [globalFilter, setGlobalFilter] = useState("");
 
   const handleDeleteService = async (serviceId: string) => {
     try {
       await deleteServiceMonitor(serviceId)
         .unwrap()
-        .then(() =>
+        .then(() => {
           setServiceMonitors(
             serviceMonitors.filter(
               (service) => service.SystemMonitorId !== serviceId
             )
-          )
-        );
+          );
 
-      toast("Service has been deleted");
+          toast.success("Service monitor deleted successfully");
+        });
     } catch (error) {
       console.error("Error deleting group:", error);
     }
+  };
+
+  const selectedRows = Object.keys(rowSelection);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkExportOpen, setBulkExportOpen] = useState(false);
+
+  const handleBulkDelete = async () => {
+    await Promise.all(selectedRows.map((id) => deleteServiceMonitor(id).unwrap()));
+    setRowSelection({});
+    refetch();
+    toast.success(`${selectedRows.length} services deleted`);
+    setBulkDeleteOpen(false);
+  };
+
+  const handleBulkExport = () => {
+    const selectedMonitors = serviceMonitors.filter((m) =>
+      selectedRows.includes(m.SystemMonitorId)
+    );
+    exportToExcel({ serviceMonitors: selectedMonitors });
+    toast.success(`${selectedRows.length} services exported`);
+    setBulkExportOpen(false);
+  };
+
+  const handleExportClick = (type: "excel" | "pdf") => {
+    setExportType(type);
+    setExportConfirmOpen(true);
+  };
+
+  const handleExportConfirm = () => {
+    if (exportType === "excel") {
+      exportToExcel({ serviceMonitors });
+      toast("Excel export completed");
+    } else {
+      exportToPDF({ serviceMonitors });
+      toast("PDF export initiated");
+    }
+    setExportConfirmOpen(false);
   };
 
   const {
@@ -96,24 +159,33 @@ const ServicesManagement = () => {
   const table = useReactTable({
     data: serviceMonitors,
     columns: columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: "includesString",
     state: {
       sorting,
+      columnVisibility,
+      rowSelection,
       columnFilters,
       globalFilter,
+      pagination,
     },
+    getRowId: (row) => row.SystemMonitorId.toString(),
+    enableRowSelection: true,
+    onSortingChange: setSorting,
+    onRowSelectionChange: setRowSelection,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: "includesString",
   });
 
   const handleSuccess = async () => {
     refetch();
-
     setIsEditDialogOpen(false);
     setEditingServiceId(null);
   };
@@ -128,7 +200,7 @@ const ServicesManagement = () => {
 
   if (error) {
     return (
-      <div className="h-[calc(100dvh-150px)] w-full flex justify-center items-center gap-3">
+      <div className="min-h-[calc(100dvh-150px)] w-full flex justify-center items-center gap-3">
         Error loading data
         <Button onClick={() => refetch()}>Retry</Button>
       </div>
@@ -140,26 +212,65 @@ const ServicesManagement = () => {
       <motion.div className="space-y-6 space-x-1">
         <Card className="border-0 py-0 px-1">
           <CardHeader>
-            {/* Header */}
             <Header
               title="Monitor Manager"
               subTitle="Get To The Fundamentals"
               subTitle2="Organize and monitor your entities"
               image="Programmer"
               ctaButton={
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditDialogOpen(true)}
-                  className="border-green-600 hover:bg-green-400 dark:text-white px-4 py-6 rounded-lg font-medium transition-colors flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Service Monitor
-                </Button>
+                <div className="flex gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="border-blue-600 hover:bg-blue-400 dark:text-white px-4 py-6 rounded-lg font-medium transition-colors flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export Inventory
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={() => handleExportClick("excel")}
+                        className="px-4 py-3"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 mr-2" />
+                        Export as Excel
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleExportClick("pdf")}
+                        className="px-4 py-3"
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Export as PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditDialogOpen(true)}
+                    className="border-green-600 hover:bg-green-400 dark:text-white px-4 py-6 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Service Monitor
+                  </Button>
+                </div>
               }
             />
           </CardHeader>
 
           <CardContent>
+            {selectedRows.length > 0 && (
+              <div className="flex items-center gap-2 mb-4 p-3 bg-muted rounded-lg">
+                <span className="text-sm font-medium">{selectedRows.length} selected</span>
+                <Button className="px-4 py-6 border-red-400 hover:border-red-600 dark:text-white" size="sm" variant="outline" onClick={() => setBulkDeleteOpen(true)}>
+                  Delete Selected
+                </Button>
+                <Button className="px-4 py-6 border-blue-400 hover:border-blue-600 dark:text-white" size="sm" variant="outline" onClick={() => setBulkExportOpen(true)}>
+                  Export Selected
+                </Button>
+              </div>
+            )}
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -198,7 +309,7 @@ const ServicesManagement = () => {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={serviceMonitors.length}
+                        colSpan={columns.length}
                         className="h-24 text-center"
                       >
                         No results.
@@ -297,9 +408,45 @@ const ServicesManagement = () => {
             />
           </DialogContent>
         </Dialog>
+
+        <ActionConfirmation
+          open={exportConfirmOpen}
+          onOpenChange={setExportConfirmOpen}
+          triggerButtonLabel=""
+          dialogTitle="Export Confirmation"
+          dialogDescription={`Are you sure you want to export ${serviceMonitors.length} service monitors as ${exportType.toUpperCase()}? This will download the application inventory report to your device.`}
+          actionButtonLabel="Export"
+          onConfirm={handleExportConfirm}
+          onCancel={() => setExportConfirmOpen(false)}
+          customTrigger={<></>}
+        />
+
+        <ActionConfirmation
+          open={bulkDeleteOpen}
+          onOpenChange={setBulkDeleteOpen}
+          triggerButtonLabel=""
+          dialogTitle="Delete Selected Services"
+          dialogDescription={`Are you sure you want to delete ${selectedRows.length} selected services? This action cannot be undone.`}
+          actionButtonLabel="Delete"
+          onConfirm={handleBulkDelete}
+          onCancel={() => setBulkDeleteOpen(false)}
+          customTrigger={<></>}
+        />
+
+        <ActionConfirmation
+          open={bulkExportOpen}
+          onOpenChange={setBulkExportOpen}
+          triggerButtonLabel=""
+          dialogTitle="Export Selected Services"
+          dialogDescription={`Export ${selectedRows.length} selected services to Excel format?`}
+          actionButtonLabel="Export"
+          onConfirm={handleBulkExport}
+          onCancel={() => setBulkExportOpen(false)}
+          customTrigger={<></>}
+        />
       </motion.div>
     </AnimatePresence>
   );
 };
 
-export default ServicesManagement;
+export default AuthRequired(PageNameEnum.SERVICE_MONITOR)(ServicesManagement);

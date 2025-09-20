@@ -11,37 +11,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Card, CardDescription } from "@/components/ui/card";
 import { HexStatusColor, StatusIcon } from "@/lib/hooks/useStatusHooks";
 import { cn } from "@/lib/utils";
+import { generateInitials } from "@/lib/helpers/utils";
 
 interface AddedProps<T> extends InputHTMLAttributes<HTMLDivElement> {
   icon?: React.JSX.Element;
   onClick?: () => object;
   data: Array<T & { selected?: boolean }>;
 }
-
-// Helper function to generate initials from service name
-const generateInitials = (serviceName: string) => {
-  if (!serviceName) return "?";
-
-  // Split by common separators and filter out empty strings
-  const words = serviceName
-    .split(/[\s\-_\.]+/)
-    .filter((word) => word.length > 0);
-
-  if (words.length === 1) {
-    // Single word: take first 2-3 characters
-    return words[0].substring(0, Math.min(3, words[0].length)).toUpperCase();
-  } else if (words.length === 2) {
-    // Two words: take first character of each
-    return (words[0][0] + words[1][0]).toUpperCase();
-  } else {
-    // Multiple words: take first character of first 3 words
-    return words
-      .slice(0, 3)
-      .map((word) => word[0])
-      .join("")
-      .toUpperCase();
-  }
-};
 
 const HexagonGridView = <T extends BaseMonitor>({
   ...props

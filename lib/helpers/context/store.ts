@@ -5,6 +5,7 @@ import { RemoteMonitorsAPI } from "../api/RemoteService";
 import { AgentAPI } from "../api/AgentService";
 import { AuthAPI } from "../api/AuthService";
 import { RulesAPI } from "../api/RulesService";
+import { UsersAPI } from "../api/UserService";
 
 export const store = configureStore({
   reducer: {
@@ -13,6 +14,7 @@ export const store = configureStore({
     [AgentAPI.reducerPath]: AgentAPI.reducer,
     [AuthAPI.reducerPath]: AuthAPI.reducer,
     [RulesAPI.reducerPath]: RulesAPI.reducer,
+    [UsersAPI.reducerPath]: UsersAPI.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
@@ -21,6 +23,7 @@ export const store = configureStore({
       .concat(AgentAPI.middleware)
       .concat(AuthAPI.middleware)
       .concat(RulesAPI.middleware)
+      .concat(UsersAPI.middleware)
 });
 
 // For typed hooks

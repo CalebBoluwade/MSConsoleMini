@@ -19,15 +19,13 @@ export const AuthAPI = createApi({
         url: "/AuthenticateUserAD",
         method: "POST",
         data: payload,
+        headers: {
+          "Content-Type": "application/json",
+        },
       }),
       invalidatesTags: ["Auth"],
     }),
-
-
   }),
 });
 
-export const {
-  useLoginUserMutation,
-
-} = AuthAPI;
+export const { useLoginUserMutation } = AuthAPI;

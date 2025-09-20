@@ -34,7 +34,7 @@ export default function RootLayout({
               disableTransitionOnChange
             >
               {children}
-              <Toaster />
+              <Toaster position="top-center" expand={true} richColors />
             </ThemeProvider>
           </Suspense>
         </ReduxProvider>

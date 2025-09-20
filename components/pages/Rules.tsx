@@ -3,20 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import AlertRuleManagement from "../forms/AlertRuleManagement";
-
-import { useGetAllMonitorsQuery } from "@/lib/helpers/api/MonitorService";
 import LoadingEventUI from "../LoadingUI";
 import { Button } from "../ui/button";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  Bell,
-  Mail,
-  MoreHorizontal,
-  Plus,
-  Slack,
-  UserCircle,
-  Webhook,
-} from "lucide-react";
+import { Bell, Mail, MoreHorizontal, Plus, Slack, Webhook } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import DataTable from "../DataTable";
 import {
@@ -37,6 +27,9 @@ import Header from "../Header";
 import { Card, CardContent, CardHeader } from "../ui/card";
 import ActionConfirmation from "../ActionConfirmation";
 import { toast } from "sonner";
+import { generateInitials } from "@/lib/helpers/utils";
+import { PageNameEnum } from "@/lib/config/site-map";
+import AuthRequired from "@/lib/hooks/useAuthRequired";
 
 const Rules = () => {
   const [showRuleModal, setShowRuleModal] = useState<boolean>(false);
@@ -49,15 +42,11 @@ const Rules = () => {
   const [deleteRule, { isLoading: isDeleteLoading }] = useDeleteRuleMutation(
     {}
   );
-  const {
-    data: monitorNodes,
-    isLoading: isMonitorsLoading,
-    isError: isMonitorsError,
-  } = useGetAllMonitorsQuery();
 
   useEffect(() => {
     if (rulesData) {
       setRules(rulesData.data.data ?? []);
+      toast.success("Rules Loaded");
     }
 
     const loadGroups = async () => {
@@ -109,12 +98,14 @@ const Rules = () => {
     }
   };
 
-  const Users = ({ user }: { user: string }) => {
+  const Users = ({ user, initials }: { user: string; initials: string }) => {
     return (
       <Avatar key={user.substring(5, 7)} className="h-8 w-8 rounded-full">
         <AvatarImage src={user} alt="Avatar" />
         <AvatarFallback>
-          <UserCircle />
+          <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-medium">
+            {initials}
+          </div>
         </AvatarFallback>
       </Avatar>
     );
@@ -122,7 +113,17 @@ const Rules = () => {
 
   const columns: ColumnDef<MonitoringRule>[] = [
     { accessorKey: "name", header: "Rule Name" },
-    { accessorKey: "serviceName", header: "Service Name" },
+    {
+      accessorKey: "serviceName",
+      header: "Service Name",
+      cell: ({ row }) => (
+        <div className="text-center">
+          {row.original.serviceId === "00000000-0000-0000-0000-000000000000"
+            ? "*"
+            : row.original.serviceId || "N / A"}
+        </div>
+      ),
+    },
     { accessorKey: "description", header: "Rule Description" },
     { accessorKey: "metricName", header: "Rule Metric" },
     {
@@ -134,7 +135,7 @@ const Rules = () => {
         </div>
       ),
     },
-        {
+    {
       accessorKey: "conditions.breaches",
       header: "Consecutive Breaches",
       cell: ({ row }) => (
@@ -186,22 +187,28 @@ const Rules = () => {
       },
     },
     {
-      accessorKey: "users",
+      accessorKey: "recipients",
       header: "Assigned Receipients",
       cell: ({ row }) => {
-        const users: string[] = row.original.recipientsUserIds ?? [];
+        const users = row.original.recipients ?? [];
+        console.log(users);
 
         if (!users || users.length === 0) {
           return <span className="text-gray-400 text-center">No Users</span>;
         }
 
-        <div className="flex -space-x-1">
-
-          {users.map((user, i) => (
-            <Users key={i + 1} user={user} />
-          ))}
-        </div>
-    },
+        return (
+          <div className="flex space-x-1">
+            {users.map((user, i) => (
+              <Users
+                key={i + 1}
+                user={user.avatar}
+                initials={generateInitials(user.fullName)}
+              />
+            ))}
+          </div>
+        );
+      },
     },
     { accessorKey: "createdAt", header: "Created At" },
     {
@@ -224,11 +231,11 @@ const Rules = () => {
                 onClick={() => {
                   setSelectedRule(rule);
 
-                  if (!isMonitorsLoading && !isMonitorsError) {
-                    setShowRuleModal(true);
-                  } else {
-                    toast.error("Monitors Unavailable");
-                  }
+                  setShowRuleModal(true);
+                  // if (!isMonitorsLoading && !isMonitorsError) {
+                  // } else {
+                  //   toast.error("Monitors Unavailable");
+                  // }
                 }}
               >
                 Edit Rule
@@ -259,7 +266,7 @@ const Rules = () => {
     },
   ];
 
-  if (isLoading || isMonitorsLoading) {
+  if (isLoading) {
     return (
       <div className="h-[calc(100dvh-150px)] w-full flex justify-center items-center">
         <LoadingEventUI />
@@ -267,7 +274,7 @@ const Rules = () => {
     );
   }
 
-  if (isError || isMonitorsError) {
+  if (isError) {
     return (
       <div className="h-[calc(100dvh-150px)] w-full flex justify-center items-center">
         Error loading data
@@ -345,8 +352,11 @@ const Rules = () => {
           <DialogContent className="md:min-w-200 max-h-[85vh] overflow-y-auto">
             <AlertRuleManagement
               ruleId={selectedRule?.name}
-              nodes={monitorNodes!}
               nodeGroups={monitorGroups}
+              onSuccess={() => {
+                setShowRuleModal(false);
+                setSelectedRule(null);
+              }}
             />
           </DialogContent>
         </Dialog>
@@ -355,4 +365,4 @@ const Rules = () => {
   );
 };
 
-export default Rules;
+export default AuthRequired(PageNameEnum.RULES)(Rules);

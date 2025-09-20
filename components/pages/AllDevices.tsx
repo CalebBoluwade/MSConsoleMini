@@ -8,6 +8,8 @@ import { webSocketService } from "@/lib/helpers/service/websocket.service";
 import { toast } from "sonner";
 import { WifiOff } from "lucide-react";
 import { connected } from "process";
+import { PageNameEnum } from "@/lib/config/site-map";
+import AuthRequired from "@/lib/hooks/useAuthRequired";
 
 const AllDevices = () => {
   const [devices, setDevices] = useState<BaseMonitor[]>([]);
@@ -83,10 +85,10 @@ const AllDevices = () => {
   }
 
   return (
-    <div className="mt-16 py-4 px-4 --space-y-6">
+    <div className="py-4 px-4 --space-y-6">
       <HexagonGridView className="py-4 px-4 --space-y-6" data={devices} />
     </div>
   );
 };
 
-export default AllDevices;
+export default AuthRequired(PageNameEnum.OBSERVABILITY)(AllDevices);

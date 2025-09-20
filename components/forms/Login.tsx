@@ -66,12 +66,17 @@ const Login = () => {
         toast.success(response.message, {
           icon: <UserCheck2Icon />,
           description: `Welcome ${
-            response?.userData.firstName ?? "User"
+            response?.userData ? response?.userData.displayName : "User"
           }. Logging You In...`,
         });
 
-        router.push(callbackUrl ? callbackUrl : "/console/", {
-          scroll: true,
+        localStorage.setItem("session", JSON.stringify(response));
+        
+        // Dispatch custom event to notify auth hook of session update
+        window.dispatchEvent(new Event("auth-updated"));
+
+        router.push(callbackUrl ?? "/console/", {
+          scroll: false,
         });
       })
       .catch((error) => {
@@ -151,7 +156,7 @@ const Login = () => {
                                   type={showPassword ? "text" : "password"}
                                   placeholder="***********"
                                   className={cn(
-                                    "pl-10 pr-10 h-16",
+                                    "pl-10 pr-10 h-16 bg-black/15",
                                     customStyle
                                   )}
                                   {...field}

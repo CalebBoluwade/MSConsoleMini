@@ -5,14 +5,15 @@ import useDebouncedSearch from "@/lib/hooks/useDebouncedSearch";
 import { Search } from "lucide-react";
 import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { generateInitials } from "@/lib/helpers/utils";
 
-interface User {
-  id: string;
-  name: string;
-  jobTitle: string;
-  avatar: string;
-  initials: string;
-}
+// interface User {
+//   id: string;
+//   name: string;
+//   jobTitle: string;
+//   avatar: string;
+//   initials: string;
+// }
 
 interface UserSelectDropdownProps {
   value: string[];
@@ -44,8 +45,8 @@ const UserSelectDropdown: React.FC<UserSelectDropdownProps> = ({
     const query = debouncedSearchTerm.toLowerCase();
     return users.filter(
       (user) =>
-        user.name.toLowerCase().includes(query) ||
-        user.jobTitle.toLowerCase().includes(query)
+        user.fullName.toLowerCase().includes(query) ||
+        user.title.toLowerCase().includes(query)
     );
   }, [users, debouncedSearchTerm]);
 
@@ -61,12 +62,12 @@ const UserSelectDropdown: React.FC<UserSelectDropdownProps> = ({
               className="flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
             >
               <Avatar className="h-10 w-10">
-                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarImage src={user.avatar} alt={user.fullName} />
                 <AvatarFallback className="text-sm bg-blue-200 text-blue-700">
-                  {user.initials}
+                  {generateInitials(user.fullName)}
                 </AvatarFallback>
               </Avatar>
-              <span>{user.name}</span>
+              <span>{user.fullName}</span>
               <Button
                 type="button"
                 variant={"ghost"}
@@ -87,16 +88,15 @@ const UserSelectDropdown: React.FC<UserSelectDropdownProps> = ({
             placeholder="Search Users"
             value={searchQuery}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-              setSearchQuery(e.target.value)
-              setIsOpen(!isOpen)
-            }
-            }
+              setSearchQuery(e.target.value);
+              setIsOpen(!isOpen);
+            }}
             className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
           />
         </PopoverTrigger>
 
-        <PopoverContent className="py-3 px-0 w-full lg:w-[38rem] --max-h-50 overflow-y-auto rounded-md">
+        <PopoverContent className="py-3 px-0 w-full lg:w-[38rem] max-h-[80%] overflow-y-auto rounded-md">
           {filteredUsers.length > 0 ? (
             users.map((user) => (
               <div
@@ -118,14 +118,14 @@ const UserSelectDropdown: React.FC<UserSelectDropdownProps> = ({
 
                     <AvatarFallback>
                       <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-medium">
-                        {user.initials}
+                        {generateInitials(user.fullName)}
                       </div>
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="w-full">
-                  <div className="text-sm font-medium">{user.name}</div>
-                  <div className="text-xs text-gray-500">{user.jobTitle}</div>
+                  <div className="text-sm font-medium">{user.fullName}</div>
+                  <div className="text-xs text-gray-500">{user.title}</div>
                 </div>
               </div>
             ))

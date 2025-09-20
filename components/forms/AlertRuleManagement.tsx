@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
-import { Mail, Smartphone, Slack } from "lucide-react";
+import { Mail, Smartphone, Slack, AlertTriangle } from "lucide-react";
 import { Button } from "../ui/button";
 
 import UserSelectDropdown from "../UserSelect";
@@ -29,28 +29,52 @@ import {
   useCreateRuleMutation,
   useGetRuleQuery,
   useUpdateRuleMutation,
+  useCheckRuleConflictsMutation,
 } from "@/lib/helpers/api/RulesService";
 import LoadingEventUI from "../LoadingUI";
 import { metrics } from "@/lib/helpers/constants";
-
-interface User {
-  id: string;
-  name: string;
-  jobTitle: string;
-  avatar: string;
-  initials: string;
-}
+import { useUsersQuery } from "@/lib/helpers/api/UserService";
+import { useGetAllMonitorsQuery } from "@/lib/helpers/api/MonitorService";
+import {
+  alertThrottleOptions,
+  evaluationWindowOptions,
+} from "@/lib/helpers/utils";
+import { toast } from "sonner";
 
 interface RuleFormProps {
   ruleId?: string;
-  // onSubmit: () => void;
-  nodes: BaseMonitor[];
   nodeGroups: MonitorGroup[];
+  onSuccess?: () => void;
 }
 
-const AlertRuleManagement: React.FC<RuleFormProps> = ({ ruleId }) => {
+const AlertRuleManagement: React.FC<RuleFormProps> = ({
+  ruleId,
+  onSuccess,
+}) => {
   const [conflicts, setConflicts] = useState<RuleConflict[]>([]);
+  const [monitorNodes, setMonitorNodes] = useState<BaseMonitor[]>([]);
   const [selectedRule, setSelectedRule] = useState<MonitoringRule>();
+
+  const {
+    data: users,
+    isLoading: isUsersLoading,
+    isError,
+    refetch: refetchUsers,
+  } = useUsersQuery(
+    {
+      page: 0,
+      pageSize: 50,
+    },
+    {
+      refetchOnMountOrArgChange: true,
+    }
+  );
+
+  const {
+    data: nodes,
+    // isLoading: isMonitorsLoading,
+    // isError: isMonitorsError,
+  } = useGetAllMonitorsQuery();
 
   const { data, isLoading } = useGetRuleQuery(ruleId!, {
     skip: !ruleId,
@@ -62,12 +86,15 @@ const AlertRuleManagement: React.FC<RuleFormProps> = ({ ruleId }) => {
   const form = useForm<RuleSchema>({
     resolver: zodResolver(RuleSchema),
     defaultValues: {
-      createdBy: "",
       name: selectedRule ? selectedRule.name : "",
+      recipients: selectedRule
+        ? selectedRule.recipients.map((user) => user.id)
+        : [],
       severity: "info",
       conditions: {
         ConsecutiveBreaches: 3,
-        EvaluationWindow: 10,
+        AggregationMethod: "avg",
+        EvaluationWindow: "10m",
       },
       constraints: {
         excludeMetrics: [],
@@ -77,8 +104,33 @@ const AlertRuleManagement: React.FC<RuleFormProps> = ({ ruleId }) => {
     },
   });
 
+  const selectedWindow = form.watch("conditions.EvaluationWindow");
   const watchedMetric = form.watch("metricName");
   const watchedThreshold = form.watch("conditions.Threshold");
+
+    const [createRule] = useCreateRuleMutation();
+  const [checkRuleConflicts] = useCheckRuleConflictsMutation();
+
+  const checkConflicts = async () => {
+    const formValues = form.getValues();
+    const { metricName, conditions, serviceId } = formValues;
+    
+    if (!metricName || !conditions?.Threshold) return;
+
+    try {
+      const result = await checkRuleConflicts({
+        metricName,
+        threshold: conditions.Threshold,
+        serviceId,
+        excludeRuleId: ruleId
+      }).unwrap();
+      
+      setConflicts(result.conflicts || []);
+    } catch (error) {
+      console.error('Error checking conflicts:', error);
+      setConflicts([]);
+    }
+  };
 
   // Check for conflicts when metric or threshold changes
   useEffect(() => {
@@ -86,19 +138,14 @@ const AlertRuleManagement: React.FC<RuleFormProps> = ({ ruleId }) => {
       checkConflicts();
     }
 
+    if (nodes) {
+      setMonitorNodes(nodes);
+    }
+
     if (data) {
       setSelectedRule(data.data);
     }
-  }, [watchedMetric, watchedThreshold, data]);
-
-  const [createRule] = useCreateRuleMutation();
-
-  const checkConflicts = async () => {
-    // Implementation to check conflicts in real-time
-    // This would call the API to check for similar rules
-
-    setConflicts([]);
-  };
+  }, [watchedMetric, watchedThreshold, data, nodes]);
 
   // Helper functions for handling array field changes
   const handleAddItem = (field: any, title: string) => {
@@ -118,59 +165,37 @@ const AlertRuleManagement: React.FC<RuleFormProps> = ({ ruleId }) => {
       checked ? handleAddItem(field, item) : handleRemoveItem(field, item);
     };
 
-  const defaultUsers: User[] = [
-    {
-      id: "1",
-      name: "Alice Johnson",
-      jobTitle: "Senior Frontend Developer",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
-      initials: "AJ",
-    },
-    {
-      id: "2",
-      name: "Bob Smith",
-      jobTitle: "Product Manager",
-      avatar:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-      initials: "BS",
-    },
-    {
-      id: "3",
-      name: "Carol Davis",
-      jobTitle: "UX Designer",
-      avatar:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
-      initials: "CD",
-    },
-    {
-      id: "4",
-      name: "David Wilson",
-      jobTitle: "Backend Engineer",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-      initials: "DW",
-    },
-    {
-      id: "5",
-      name: "Emma Brown",
-      jobTitle: "Data Scientist",
-      avatar:
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face",
-      initials: "EB",
-    },
-  ];
-
   const handleRuleSubmit = async (data: RuleSchema) => {
     if (ruleId) {
       updateRule({
         id: ruleId,
         rule: data,
-      }).unwrap();
+      })
+        .unwrap()
+        .then(() => {
+          onSuccess?.();
+        })
+        .catch((error) => {
+          console.error("Error updating rule:", error);
+
+          toast.error("Failed to update rule. Please try again.");
+        });
+
+        return;
     }
 
-    data.createdBy = "user.id";
-    createRule(data).unwrap();
+    createRule(data)
+      .unwrap()
+      .then(() => {
+        onSuccess?.();
+
+        toast.success("Rule created successfully!");
+      })
+      .catch((error) => {
+        console.error("Error creating rule:", error);
+
+        toast.error("Failed to create rule. Please try again.");
+      });
   };
 
   console.log(form.getValues(), "\n\n", form.formState.errors);
@@ -189,6 +214,39 @@ const AlertRuleManagement: React.FC<RuleFormProps> = ({ ruleId }) => {
               <FormLabel>Rule Name</FormLabel>
               <FormControl>
                 <Input placeholder="Enter Rule Name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="serviceId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                Service Name * [Select * for all services]
+              </FormLabel>
+              <FormControl>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Enter Service Name" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem key="all-services" value="*">
+                      * for all services
+                    </SelectItem>
+                    {monitorNodes.map((item) => (
+                      <SelectItem
+                        key={item.SystemMonitorId}
+                        value={item.SystemMonitorId}
+                      >
+                        {item.ServiceName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -364,24 +422,43 @@ const AlertRuleManagement: React.FC<RuleFormProps> = ({ ruleId }) => {
               name="conditions.EvaluationWindow"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    Evaluation Window (Minutes) *
-                  </FormLabel>
+                  <FormLabel>Evaluation Window (Minutes) *</FormLabel>
                   <FormControl>
-                    <Input
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                      placeholder="10"
-                      type="number"
-                      min={1}
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                    />
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Evaluation Window (Minutes) *" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {evaluationWindowOptions.map((option) => (
+                          <SelectItem key={option.label} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {selectedWindow === "Custom" && (
+              <div className="space-y-2">
+                <FormField
+                  control={form.control}
+                  name="customWindow"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Custom Evaluation Window</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 5m / 1h" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 items-center gap-4 space-y-2">
@@ -411,41 +488,67 @@ const AlertRuleManagement: React.FC<RuleFormProps> = ({ ruleId }) => {
 
             <FormField
               control={form.control}
-              name="conditions.dedupPeriodMin"
+              name="conditions.AlertThrottleTime"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
+                  <FormLabel>
                     Alert Throttle Time (Alert Cooldown Period) *
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                      placeholder="Enter Alert Throttle (Minutes)"
-                      type="number"
-                      {...field}
-                      min={0}
-                      value={field.value ?? ""}
-                      onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                    />
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Alert Throttle Time (Minutes) *" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {alertThrottleOptions.map((option) => (
+                          <SelectItem key={option.label} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {selectedWindow === "Custom" && (
+              <div className="space-y-2">
+                <FormField
+                  control={form.control}
+                  name="customWindow"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Custom Evaluation Window</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 5m / 1h" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* Conflicts Display */}
         {conflicts.length > 0 && (
-          <div className="border border-yellow-200 rounded-lg p-4 bg-yellow-50">
-            <h4 className="text-sm font-medium text-yellow-800 mb-2">
-              Potential Conflicts Detected
-            </h4>
-            {conflicts.map((conflict, index) => (
-              <div key={index + 1} className="text-sm text-yellow-700">
-                {conflict.description}
-              </div>
-            ))}
+          <div className="border border-yellow-300 rounded-lg p-4 bg-yellow-50">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              <h4 className="text-sm font-medium text-yellow-800">
+                {conflicts.length} Potential Conflict{conflicts.length > 1 ? 's' : ''} Detected
+              </h4>
+            </div>
+            <div className="space-y-2">
+              {conflicts.map((conflict, index) => (
+                <div key={index + 1} className="text-sm text-yellow-700 pl-7">
+                  • {conflict.description}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -458,11 +561,26 @@ const AlertRuleManagement: React.FC<RuleFormProps> = ({ ruleId }) => {
                 Recepients *
               </FormLabel>
               <FormControl>
-                <UserSelectDropdown
-                  value={field.value}
-                  onChange={field.onChange}
-                  users={defaultUsers}
-                />
+                <div className="mb-2">
+                  {isUsersLoading && (
+                    <div>
+                      Loading users... <LoadingEventUI />
+                    </div>
+                  )}
+                  {isError && (
+                    <div>
+                      Error loading users.{" "}
+                      <Button onClick={() => refetchUsers()} />
+                    </div>
+                  )}
+                  {users && !isUsersLoading && (
+                    <UserSelectDropdown
+                      value={field.value}
+                      onChange={field.onChange}
+                      users={users}
+                    />
+                  )}
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -559,20 +677,6 @@ const AlertRuleManagement: React.FC<RuleFormProps> = ({ ruleId }) => {
             </FormItem>
           )}
         />
-
-        {/* Conflicts Display */}
-        {conflicts.length > 0 && (
-          <div className="border border-yellow-200 rounded-lg p-4 bg-yellow-50">
-            <h4 className="text-sm font-medium text-yellow-800 mb-2">
-              Potential Conflicts Detected
-            </h4>
-            {conflicts.map((conflict, index) => (
-              <div key={index + 1} className="text-sm text-yellow-700">
-                {conflict.description}
-              </div>
-            ))}
-          </div>
-        )}
 
         <div className="flex justify-end space-x-3">
           <Button

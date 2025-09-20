@@ -77,7 +77,7 @@ export default function DataTable<T>({
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search processors..."
+                placeholder="Search..."
                 value={globalFilter}
                 onChange={(event) => setGlobalFilter(event.target.value)}
                 className="pl-8 w-[300px]"

@@ -18,18 +18,21 @@ export const MonitorAPI = createApi({
     getAllMonitors: builder.query<BaseMonitor[], null | void>({
       query: () => ({
         url: "/systemmonitor",
+        method: "GET",
       }),
     }),
 
     getSingleMonitor: builder.query<BaseMonitor, string>({
       query: (id) => ({
         url: `/systemmonitor/${id}`,
+        method: "GET",
       }),
     }),
 
     getMonitorPlugins: builder.query<MonitorPlugin[], null | void>({
       query: () => ({
         url: "/Plugins",
+        method: "GET",
       }),
     }),
 
@@ -40,6 +43,7 @@ export const MonitorAPI = createApi({
     >({
       query: () => ({
         url: `/MonitorResults`,
+        method: "GET",
       }),
     }),
 
@@ -47,6 +51,7 @@ export const MonitorAPI = createApi({
     getMonitoringResultsById: builder.query<MonitoringResult[], string>({
       query: (id) => ({
         url: `/MonitorResults/${id}`,
+        method: "GET",
       }),
     }),
 
@@ -58,7 +63,10 @@ export const MonitorAPI = createApi({
       query: (data) => ({
         url: "/systemmonitor",
         method: "POST",
-        body: data,
+        data: data,
+        headers: {
+          "Content-Type": "application/json",
+        },
       }),
       invalidatesTags: ["ServiceMonitors"],
     }),
@@ -71,7 +79,10 @@ export const MonitorAPI = createApi({
       query: ({ id, data }) => ({
         url: `/systemmonitor/${id}`,
         method: "PUT",
-        body: data,
+        data: data,
+        headers: {
+          "Content-Type": "application/json",
+        },
       }),
       invalidatesTags: ["ServiceMonitors"],
     }),
@@ -93,7 +104,10 @@ export const MonitorAPI = createApi({
       query: ({ monitorId, configuration }) => ({
         url: `/SystemMonitor/PluginConfigEdit/${monitorId}`,
         method: "PUT",
-        body: configuration,
+        data: configuration,
+        headers: {
+          "Content-Type": "application/json",
+        },
       }),
       invalidatesTags: ["ServiceMonitors"],
     }),
